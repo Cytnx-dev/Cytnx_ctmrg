@@ -2,3 +2,4 @@ cytnx/
 include/
 lib64/
 lib/
+__pycache__/

@@ -8,7 +8,7 @@ from ipeps.ipeps import IPEPS
 from ctm.generic.env import *
 from ctm.generic.ctm_components import *
 from ctm.generic.ctm_projectors import *
-from tn_interface import contract, einsum
+from tn_interface import contract
 from tn_interface import conj
 from tn_interface import contiguous, view, permute
 import logging

@@ -66,9 +66,13 @@ def configure(parsed_args):
         setattr(main_args,name,val)
 
     # custom handling
-    if global_args.dtype=="float64":
+    # if global_args.dtype=="float64":
+    #     global_args.cytnx_dtype= cytnx.Type.Double
+    # elif global_args.dtype=="complex128":
+    #     global_args.cytnx_dtype= cytnx.Type.ComplexDouble
+    if global_args.dtype==cytnx.Type.Double:
         global_args.cytnx_dtype= cytnx.Type.Double
-    elif global_args.dtype=="complex128":
+    elif global_args.dtype==cytnx.Type.ComplexDouble:
         global_args.cytnx_dtype= cytnx.Type.ComplexDouble
     else:
         raise NotImplementedError(f"Unsupported dtype {global_args.dtype}")
@@ -167,9 +171,11 @@ class GLOBALARGS():
     """
     def __init__(self):
         self.tensor_io_format= "legacy"
-        self.dtype= "float64"
+        # self.dtype= "float64"
+        self.dtype= cytnx.Type.Double
         self.cytnx_dtype= cytnx.Type.Double
-        self.device= 'cpu'
+        # self.device= 'cpu'
+        self.device= -1
         self.offload_to_gpu= 'None'
 
     def __str__(self):

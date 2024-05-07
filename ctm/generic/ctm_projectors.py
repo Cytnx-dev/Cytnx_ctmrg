@@ -5,9 +5,9 @@ import config as cfg
 #from ipeps.ipeps import IPEPS
 #from ctm.generic.env import ENV
 from ctm.generic.ctm_components import *
-from linalg.custom_svd import *
-from tn_interface import mm
-from tn_interface import conj, transpose
+# from linalg.custom_svd import *
+from tn_interface import *
+
 import logging
 log = logging.getLogger(__name__)
 

@@ -106,8 +106,10 @@ class IPEPS():
         else:
             assert len(set( tuple( site.dtype for site in sites.values() ) ))==1,"Mixed dtypes in sites"
             assert len(set( tuple( site.device for site in sites.values() ) ))==1,"Mixed devices in sites"
-            self.dtype= next(iter(sites.values())).dtype
-            self.device= next(iter(sites.values())).device
+            # self.dtype= next(iter(sites.values())).dtype
+            # self.device= next(iter(sites.values())).device
+            self.dtype= next(iter(sites.values())).dtype()
+            self.device= next(iter(sites.values())).device()
             self.sites= OrderedDict(sites)
 
         # TODO we infer the size of the cluster from the keys of sites. Is it OK?

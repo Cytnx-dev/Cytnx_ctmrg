@@ -1,7 +1,8 @@
 from math import sqrt
-import torch
+# import torch
+import cytnx
 import config as cfg
-from tn_interface import einsum
+# from tn_interface import einsum
 from tn_interface import conj
 from tn_interface import contiguous, view
 import logging
@@ -75,7 +76,7 @@ class ENV():
             self.dtype= state.dtype
             self.device= state.device
         else:
-            self.dtype= global_args.torch_dtype
+            self.dtype= global_args.cytnx_dtype
             self.device= global_args.device
         self.chi = chi
 
@@ -85,24 +86,34 @@ class ENV():
 
 
         if state is not None:
-            numl= 2 if len(next(iter(state.sites.values())).size())>4 else 1
+            # numl= 2 if len(next(iter(state.sites.values())).size())>4 else 1
+            numl= 2 if len(next(iter(state.sites.values())).shape())>4 else 1
             for coord, site in state.sites.items():
                 #for vec in [(0,-1), (-1,0), (0,1), (1,0)]:
                 #    self.T[(coord,vec)]="T"+str(ipeps.site(coord))
-                self.T[(coord,(0,-1))]=torch.empty((self.chi,site.size(-4)**numl,self.chi), 
-                    dtype=self.dtype, device=self.device)
-                self.T[(coord,(-1,0))]=torch.empty((self.chi,self.chi,site.size(-3)**numl),
-                    dtype=self.dtype, device=self.device)
-                self.T[(coord,(0,1))]=torch.empty((site.size(-2)**numl,self.chi,self.chi), 
-                    dtype=self.dtype, device=self.device)
-                self.T[(coord,(1,0))]=torch.empty((self.chi,site.size(-1)**numl,self.chi), 
-                    dtype=self.dtype, device=self.device)
-
+                # self.T[(coord,(0,-1))]=torch.empty((self.chi,site.size(-4)**numl,self.chi), 
+                #     dtype=self.dtype, device=self.device)
+                # self.T[(coord,(-1,0))]=torch.empty((self.chi,self.chi,site.size(-3)**numl),
+                #     dtype=self.dtype, device=self.device)
+                # self.T[(coord,(0,1))]=torch.empty((site.size(-2)**numl,self.chi,self.chi), 
+                #     dtype=self.dtype, device=self.device)
+                # self.T[(coord,(1,0))]=torch.empty((self.chi,site.size(-1)**numl,self.chi), 
+                #     dtype=self.dtype, device=self.device)
+                
+                self.T[(coord,(0,-1))]=cytnx.UniTensor(cytnx.zeros([self.chi,site.shape()[-4]**numl,self.chi], 
+                    dtype=self.dtype, device=self.device))
+                self.T[(coord,(-1,0))]=cytnx.UniTensor(cytnx.zeros([self.chi,self.chi,site.shape()[-3]**numl],
+                    dtype=self.dtype, device=self.device))
+                self.T[(coord,(0,1))]=cytnx.UniTensor(cytnx.zeros([site.shape()[-2]**numl,self.chi,self.chi], 
+                    dtype=self.dtype, device=self.device))
+                self.T[(coord,(1,0))]=cytnx.UniTensor(cytnx.zeros([self.chi,site.shape()[-1]**numl,self.chi], 
+                    dtype=self.dtype, device=self.device))
+                
                 #for vec in [(-1,-1), (-1,1), (1,-1), (1,1)]:
                 #     self.C[(coord,vec)]="C"+str(ipeps.site(coord))
                 for vec in [(-1,-1), (-1,1), (1,-1), (1,1)]:
-                    self.C[(coord,vec)]=torch.empty((self.chi,self.chi), dtype=self.dtype, device=self.device)
-
+                    # self.C[(coord,vec)]=torch.empty((self.chi,self.chi), dtype=self.dtype, device=self.device)
+                    self.C[(coord,vec)]=cytnx.UniTensor(cytnx.zeros([self.chi,self.chi],dtype=self.dtype, device=self.device))
     def __str__(self):
         s=f"ENV chi={self.chi}\n"
         for cr,t in self.C.items():
@@ -111,83 +122,83 @@ class ENV():
             s+=f"T({cr[0]} {cr[1]}): {t.size()}\n"
         return s
 
-    def clone(self, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
-        r"""
-        :param ctm_args: CTM algorithm configuration
-        :param global_args: global configuration
-        :type ctm_args: CTMARGS
-        :type global_args: GLOBALARGS
+    # def clone(self, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
+    #     r"""
+    #     :param ctm_args: CTM algorithm configuration
+    #     :param global_args: global configuration
+    #     :type ctm_args: CTMARGS
+    #     :type global_args: GLOBALARGS
 
-        Create a clone of the environment.
+    #     Create a clone of the environment.
 
-        .. note::
-            This operation preserves gradient tracking.
-        """
-        new_env= ENV(self.chi, ctm_args=ctm_args, global_args=global_args)
-        new_env.C= { k: c.clone() for k,c in self.C.items() }
-        new_env.T= { k: t.clone() for k,t in self.T.items() }
-        return new_env
+    #     .. note::
+    #         This operation preserves gradient tracking.
+    #     """
+    #     new_env= ENV(self.chi, ctm_args=ctm_args, global_args=global_args)
+    #     new_env.C= { k: c.clone() for k,c in self.C.items() }
+    #     new_env.T= { k: t.clone() for k,t in self.T.items() }
+    #     return new_env
 
-    def detach(self, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
-        r"""
-        :param ctm_args: CTM algorithm configuration
-        :param global_args: global configuration
-        :type ctm_args: CTMARGS
-        :type global_args: GLOBALARGS
+    # def detach(self, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
+    #     r"""
+    #     :param ctm_args: CTM algorithm configuration
+    #     :param global_args: global configuration
+    #     :type ctm_args: CTMARGS
+    #     :type global_args: GLOBALARGS
         
-        Get a detached "view" of the environment. See 
-        `torch.Tensor.detach <https://pytorch.org/docs/stable/generated/torch.Tensor.detach.html>`_.
+    #     Get a detached "view" of the environment. See 
+    #     `torch.Tensor.detach <https://pytorch.org/docs/stable/generated/torch.Tensor.detach.html>`_.
 
-        .. note::
-            This operation does not preserve gradient tracking.
-        """
-        new_env= ENV(self.chi, ctm_args=ctm_args, global_args=global_args)
-        new_env.C= { k: c.detach() for k,c in self.C.items() }
-        new_env.T= { k: t.detach() for k,t in self.T.items() }
-        return new_env
+    #     .. note::
+    #         This operation does not preserve gradient tracking.
+    #     """
+    #     new_env= ENV(self.chi, ctm_args=ctm_args, global_args=global_args)
+    #     new_env.C= { k: c.detach() for k,c in self.C.items() }
+    #     new_env.T= { k: t.detach() for k,t in self.T.items() }
+    #     return new_env
 
-    def detach_(self):
-        for c in self.C.values(): c.detach_()
-        for t in self.T.values(): t.detach_()
+    # def detach_(self):
+    #     for c in self.C.values(): c.detach_()
+    #     for t in self.T.values(): t.detach_()
 
-    def extend(self, new_chi, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
-        r"""
-        :param new_chi: new environment bond dimension
-        :type new_chi: int
-        :param ctm_args: CTM algorithm configuration
-        :param global_args: global configuration
-        :type ctm_args: CTMARGS
-        :type global_args: GLOBALARGS
+    # def extend(self, new_chi, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
+    #     r"""
+    #     :param new_chi: new environment bond dimension
+    #     :type new_chi: int
+    #     :param ctm_args: CTM algorithm configuration
+    #     :param global_args: global configuration
+    #     :type ctm_args: CTMARGS
+    #     :type global_args: GLOBALARGS
 
-        Create a new environment with all environment tensors enlarged up to 
-        environment dimension ``new_chi``. The enlarged C, T tensors are padded with zeros.
+    #     Create a new environment with all environment tensors enlarged up to 
+    #     environment dimension ``new_chi``. The enlarged C, T tensors are padded with zeros.
 
-        .. note::
-            This operation preserves gradient tracking.
-        """
-        new_env= ENV(new_chi, ctm_args=ctm_args, global_args=global_args)
-        opts= {'dtype': self.dtype, 'device': self.device}
-        x= min(self.chi, new_chi)
-        for k,old_C in self.C.items(): 
-            new_env.C[k]= torch.zeros(new_chi,new_chi,**opts)
-            new_env.C[k][:x,:x]= old_C[:x,:x].clone().detach()
-        for k,old_T in self.T.items():
-            if k[1]==(0,-1):
-                new_env.T[k]= torch.zeros((new_chi,old_T.size(1),new_chi),**opts)
-                new_env.T[k][:x,:,:x]= old_T[:x,:,:x].clone().detach()
-            elif k[1]==(-1,0):
-                new_env.T[k]= torch.zeros((new_chi,new_chi,old_T.size(2)),**opts)
-                new_env.T[k][:x,:x,:]= old_T[:x,:x,:].clone().detach()
-            elif k[1]==(0,1):
-                new_env.T[k]= torch.zeros((old_T.size(0),new_chi,new_chi),**opts)
-                new_env.T[k][:,:x,:x]= old_T[:,:x,:x].clone().detach()
-            elif k[1]==(1,0):
-                new_env.T[k]= torch.zeros((new_chi,old_T.size(1),new_chi),**opts)
-                new_env.T[k][:x,:,:x]= old_T[:x,:,:x].clone().detach()
-            else:
-                raise Exception(f"Unexpected direction {k[1]}")
+    #     .. note::
+    #         This operation preserves gradient tracking.
+    #     """
+    #     new_env= ENV(new_chi, ctm_args=ctm_args, global_args=global_args)
+    #     opts= {'dtype': self.dtype, 'device': self.device}
+    #     x= min(self.chi, new_chi)
+    #     for k,old_C in self.C.items(): 
+    #         new_env.C[k]= torch.zeros(new_chi,new_chi,**opts)
+    #         new_env.C[k][:x,:x]= old_C[:x,:x].clone().detach()
+    #     for k,old_T in self.T.items():
+    #         if k[1]==(0,-1):
+    #             new_env.T[k]= torch.zeros((new_chi,old_T.size(1),new_chi),**opts)
+    #             new_env.T[k][:x,:,:x]= old_T[:x,:,:x].clone().detach()
+    #         elif k[1]==(-1,0):
+    #             new_env.T[k]= torch.zeros((new_chi,new_chi,old_T.size(2)),**opts)
+    #             new_env.T[k][:x,:x,:]= old_T[:x,:x,:].clone().detach()
+    #         elif k[1]==(0,1):
+    #             new_env.T[k]= torch.zeros((old_T.size(0),new_chi,new_chi),**opts)
+    #             new_env.T[k][:,:x,:x]= old_T[:,:x,:x].clone().detach()
+    #         elif k[1]==(1,0):
+    #             new_env.T[k]= torch.zeros((new_chi,old_T.size(1),new_chi),**opts)
+    #             new_env.T[k][:x,:,:x]= old_T[:x,:,:x].clone().detach()
+    #         else:
+    #             raise Exception(f"Unexpected direction {k[1]}")
 
-        return new_env
+    #     return new_env
 
     def get_spectra(self):
         spec= {}
@@ -237,134 +248,144 @@ def init_env(state, env, ctm_args=cfg.ctm_args):
           distribution [0,1)
         * ``"CTMRG"`` - tensors C and T are built from the on-site tensors of `state` 
     """
-    if len(next(iter(state.sites.values())).size())==4 and \
+    # if len(next(iter(state.sites.values())).size())==4 and \
+    #     not (ctm_args.ctm_env_init_type in ["PROD","CTMRG_OBC"]):
+    #     raise RuntimeError("Incompatible ENV initialization")
+    
+    if len(next(iter(state.sites.values())).shape())==4 and \
         not (ctm_args.ctm_env_init_type in ["PROD","CTMRG_OBC"]):
         raise RuntimeError("Incompatible ENV initialization")
-
-    if ctm_args.ctm_env_init_type=='PROD':
-        init_prod(state, env, ctm_args.verbosity_initialization)
-    elif ctm_args.ctm_env_init_type=='RANDOM':
-        init_random(env, ctm_args.verbosity_initialization)
-    elif ctm_args.ctm_env_init_type=='CTMRG':
+    
+    # if ctm_args.ctm_env_init_type=='PROD':
+    #     init_prod(state, env, ctm_args.verbosity_initialization)
+    # elif ctm_args.ctm_env_init_type=='RANDOM':
+    #     init_random(env, ctm_args.verbosity_initialization)
+    # elif ctm_args.ctm_env_init_type=='CTMRG':
+    #     init_from_ipeps_pbc(state, env, ctm_args.verbosity_initialization)
+    # elif ctm_args.ctm_env_init_type=='CTMRG_OBC':
+    #     init_from_ipeps_obc(state, env, ctm_args.verbosity_initialization)
+    # else:
+    #     raise ValueError("Invalid environment initialization: "+str(ctm_args.ctm_env_init_type))
+    if ctm_args.ctm_env_init_type=='CTMRG':
         init_from_ipeps_pbc(state, env, ctm_args.verbosity_initialization)
-    elif ctm_args.ctm_env_init_type=='CTMRG_OBC':
-        init_from_ipeps_obc(state, env, ctm_args.verbosity_initialization)
     else:
         raise ValueError("Invalid environment initialization: "+str(ctm_args.ctm_env_init_type))
 
 # TODO restrict random corners to have pos-semidef spectrum
-def init_random(env, verbosity=0):
-    for key,t in env.C.items():
-        env.C[key] = torch.rand(t.size(), dtype=env.dtype, device=env.device)
-    for key,t in env.T.items():
-        env.T[key] = torch.rand(t.size(), dtype=env.dtype, device=env.device)
+# def init_random(env, verbosity=0):
+#     for key,t in env.C.items():
+#         env.C[key] = torch.rand(t.size(), dtype=env.dtype, device=env.device)
+#     for key,t in env.T.items():
+#         env.T[key] = torch.rand(t.size(), dtype=env.dtype, device=env.device)
 
-def init_prod(state, env, verbosity=0):
-    for key,t in env.C.items():
-        env.C[key]= torch.zeros(t.size(), dtype=env.dtype, device=env.device)
-        env.C[key][0,0]= 1.0 + 0.j if env.C[key].is_complex() else 1.0
+# def init_prod(state, env, verbosity=0):
+#     for key,t in env.C.items():
+#         env.C[key]= torch.zeros(t.size(), dtype=env.dtype, device=env.device)
+#         env.C[key][0,0]= 1.0 + 0.j if env.C[key].is_complex() else 1.0
 
-    for coord, site in state.sites.items():
-        # upper transfer matrix
-        #
-        #     0      = 0--T--2     
-        # 1--A--3         1
-        #   /\
-        #  f  m
-        #      \ 0
-        #    1--A--3
-        #      /
-        #     b
-        vec = (0,-1)
-        A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
-        dimsA = A.size()
-        if len(dimsA)==4:
-            a= contiguous(einsum('uldr->d',A))
-        elif len(dimsA)==5:
-            a = contiguous(einsum('miefg,miebg->fb',A,conj(A)))
-            a = view(a, (a.size(0)**2))
-        env.T[(coord,vec)]= torch.zeros((env.chi,a.size(0),env.chi), dtype=env.dtype, device=env.device)
-        env.T[(coord,vec)][0,:,0]= a
+#     for coord, site in state.sites.items():
+#         # upper transfer matrix
+#         #
+#         #     0      = 0--T--2     
+#         # 1--A--3         1
+#         #   /\
+#         #  f  m
+#         #      \ 0
+#         #    1--A--3
+#         #      /
+#         #     b
+#         vec = (0,-1)
+#         A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
+#         dimsA = A.size()
+#         if len(dimsA)==4:
+#             a= contiguous(einsum('uldr->d',A))
+#         elif len(dimsA)==5:
+#             a = contiguous(einsum('miefg,miebg->fb',A,conj(A)))
+#             a = view(a, (a.size(0)**2))
+#         env.T[(coord,vec)]= torch.zeros((env.chi,a.size(0),env.chi), dtype=env.dtype, device=env.device)
+#         env.T[(coord,vec)][0,:,0]= a
 
-        # left transfer matrix
-        #
-        #     0      = 0     
-        # 1--A--g      T--2
-        #   /\         1
-        #  2  m
-        #      \ 0
-        #    1--A--c
-        #      /
-        #     2
-        vec = (-1,0)
-        A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
-        dimsA = A.size()
-        if len(dimsA)==4:
-            a= contiguous(einsum('uldr->r',A))
-        elif len(dimsA)==5:
-            a = contiguous(einsum('meifg,meifc->gc',A,conj(A)))
-            a = view(a, (a.size(0)**2))
-        a= a/a.abs().max()
-        env.T[(coord,vec)] = torch.zeros((env.chi,env.chi,a.size(0)), dtype=env.dtype, device=env.device)
-        env.T[(coord,vec)][0,0,:]= a
+#         # left transfer matrix
+#         #
+#         #     0      = 0     
+#         # 1--A--g      T--2
+#         #   /\         1
+#         #  2  m
+#         #      \ 0
+#         #    1--A--c
+#         #      /
+#         #     2
+#         vec = (-1,0)
+#         A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
+#         dimsA = A.size()
+#         if len(dimsA)==4:
+#             a= contiguous(einsum('uldr->r',A))
+#         elif len(dimsA)==5:
+#             a = contiguous(einsum('meifg,meifc->gc',A,conj(A)))
+#             a = view(a, (a.size(0)**2))
+#         a= a/a.abs().max()
+#         env.T[(coord,vec)] = torch.zeros((env.chi,env.chi,a.size(0)), dtype=env.dtype, device=env.device)
+#         env.T[(coord,vec)][0,0,:]= a
 
-        # lower transfer matrix
-        #
-        #     e      =    0     
-        # 1--A--3      1--T--2
-        #   /\
-        #  2  m
-        #      \ a
-        #    1--A--3
-        #      /
-        #     2
-        vec = (0,1)
-        A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
-        dimsA = A.size()
-        if len(dimsA)==4:
-            a= contiguous(einsum('uldr->u',A))
-        elif len(dimsA)==5:
-            a = contiguous(einsum('mefig,mafig->ea',A,conj(A)))
-            a = view(a, (a.size(0)**2))
-        a= a/a.abs().max()
-        env.T[(coord,vec)] = torch.zeros((a.size(0),env.chi,env.chi), dtype=env.dtype, device=env.device)
-        env.T[(coord,vec)][:,0,0]= a
+#         # lower transfer matrix
+#         #
+#         #     e      =    0     
+#         # 1--A--3      1--T--2
+#         #   /\
+#         #  2  m
+#         #      \ a
+#         #    1--A--3
+#         #      /
+#         #     2
+#         vec = (0,1)
+#         A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
+#         dimsA = A.size()
+#         if len(dimsA)==4:
+#             a= contiguous(einsum('uldr->u',A))
+#         elif len(dimsA)==5:
+#             a = contiguous(einsum('mefig,mafig->ea',A,conj(A)))
+#             a = view(a, (a.size(0)**2))
+#         a= a/a.abs().max()
+#         env.T[(coord,vec)] = torch.zeros((a.size(0),env.chi,env.chi), dtype=env.dtype, device=env.device)
+#         env.T[(coord,vec)][:,0,0]= a
 
-        # right transfer matrix
-        #
-        #     0      =    0     
-        # f--A--3      1--T
-        #   /\            2
-        #  2  m
-        #      \ 0
-        #    b--A--3
-        #      /
-        #     2
-        vec = (1,0)
-        A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
-        dimsA = A.size()
-        if len(dimsA)==4:
-            a= contiguous(einsum('uldr->l',A))
-        elif len(dimsA)==5:
-            a = contiguous(einsum('mefgi,mebgi->fb',A,conj(A)))
-            a = view(a, (a.size(0)**2))
-        a= a/a.abs().max()
-        env.T[(coord,vec)] = torch.zeros((env.chi,a.size(0),env.chi), dtype=env.dtype, device=env.device)
-        env.T[(coord,vec)][0,:,0]= a
+#         # right transfer matrix
+#         #
+#         #     0      =    0     
+#         # f--A--3      1--T
+#         #   /\            2
+#         #  2  m
+#         #      \ 0
+#         #    b--A--3
+#         #      /
+#         #     2
+#         vec = (1,0)
+#         A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
+#         dimsA = A.size()
+#         if len(dimsA)==4:
+#             a= contiguous(einsum('uldr->l',A))
+#         elif len(dimsA)==5:
+#             a = contiguous(einsum('mefgi,mebgi->fb',A,conj(A)))
+#             a = view(a, (a.size(0)**2))
+#         a= a/a.abs().max()
+#         env.T[(coord,vec)] = torch.zeros((env.chi,a.size(0),env.chi), dtype=env.dtype, device=env.device)
+#         env.T[(coord,vec)][0,:,0]= a
 
 def init_from_ipeps_pbc(state, env, verbosity=0):
     
     def _normalize_nograd(a, _ord='inf'):
-        with torch.no_grad():
-            scale= a.abs().max()
+        # with torch.no_grad():
+        #     scale= a.abs().max()
+        scale = a.get_block().Abs().Max().item()
         return a/scale
 
     if verbosity>0:
         print("ENV: init_from_ipeps")
     for coord, site in state.sites.items():
         for rel_vec in [(-1,-1),(1,-1),(1,1),(-1,1)]:
-            env.C[(coord,rel_vec)] = torch.zeros(env.chi,env.chi, dtype=env.dtype, 
-                device=env.device)
+            # env.C[(coord,rel_vec)] = torch.zeros(env.chi,env.chi, dtype=env.dtype, 
+            #     device=env.device)
+            env.C[(coord,rel_vec)] = cytnx.UniTensor(cytnx.zeros([env.chi, env.chi], dtype=env.dtype, device=env.device))
 
         # Left-upper corner
         #
@@ -378,8 +399,9 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
         #       2(e)
         vec = (-1,-1)
         A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
-        dimsA = A.size()
-        a= contiguous(einsum('mijef,mijab->eafb',A,conj(A)))
+        dimsA = A.shape()
+        # a= contiguous(einsum('mijef,mijab->eafb',A,conj(A)))
+        a= contiguous(cytnx.ncon([A,conj(A)],[[1,2,3,-1,-3],[1,2,3,-2,-4]]))
         a= view(a, (dimsA[3]**2, dimsA[4]**2))
         a= _normalize_nograd(a)
         env.C[(coord,vec)][:min(env.chi,dimsA[3]**2),:min(env.chi,dimsA[4]**2)]=\
@@ -397,8 +419,10 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
         #     2
         vec = (1,-1)
         A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
-        dimsA = A.size()
-        a= contiguous(einsum('miefj,miabj->eafb',A,conj(A)))
+        # dimsA = A.size()
+        dimsA = A.shape()
+        # a= contiguous(einsum('miefj,miabj->eafb',A,conj(A)))
+        a= contiguous(cytnx.ncon([A,conj(A)],[[1,2,-1,-3,3],[1,2,-2,-4,3]]))
         a= view(a, (dimsA[2]**2, dimsA[3]**2))
         a= _normalize_nograd(a)
         env.C[(coord,vec)][:min(env.chi,dimsA[2]**2),:min(env.chi,dimsA[3]**2)]=\
@@ -416,8 +440,10 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
         #     i
         vec = (1,1)
         A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
-        dimsA = A.size()
-        a= contiguous(einsum('mefij,mabij->eafb',A,conj(A)))
+        # dimsA = A.size()
+        dimsA = A.shape()
+        # a= contiguous(einsum('mefij,mabij->eafb',A,conj(A)))
+        a= contiguous(cytnx.ncon([A,conj(A)],[[1,-1,-3,2,3],[1,-2,-4,2,3]]))
         a= view(a, (dimsA[1]**2, dimsA[2]**2))
         a= _normalize_nograd(a)
         env.C[(coord,vec)][:min(env.chi,dimsA[1]**2),:min(env.chi,dimsA[2]**2)]=\
@@ -435,8 +461,10 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
         #     j
         vec = (-1,1)
         A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
-        dimsA = A.size()
-        a = contiguous(einsum('meijf,maijb->eafb',A,conj(A)))
+        # dimsA = A.size()
+        dimsA = A.shape()
+        # a = contiguous(einsum('meijf,maijb->eafb',A,conj(A)))
+        a= contiguous(cytnx.ncon([A,conj(A)],[[1,-1,2,3,-3],[1,-2,2,3,-4]]))
         a = view(a, (dimsA[1]**2, dimsA[4]**2))
         a= _normalize_nograd(a)
         env.C[(coord,vec)][:min(env.chi,dimsA[1]**2),:min(env.chi,dimsA[4]**2)]=\
@@ -454,11 +482,14 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
         #     (b)2
         vec = (0,-1)
         A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
-        dimsA = A.size()
-        a = contiguous(einsum('miefg,miabc->eafbgc',A,conj(A)))
+        # dimsA = A.size()
+        dimsA = A.shape()
+        # a = contiguous(einsum('miefg,miabc->eafbgc',A,conj(A)))
+        a = contiguous(cytnx.ncon([A,conj(A)],[[1,2,-1,-3,-5],[1,2,-2,-4,-6]]))
         a = view(a, (dimsA[2]**2, dimsA[3]**2, dimsA[4]**2))
         a= _normalize_nograd(a)
-        env.T[(coord,vec)] = torch.zeros((env.chi,dimsA[3]**2,env.chi), dtype=env.dtype, device=env.device)
+        # env.T[(coord,vec)] = torch.zeros((env.chi,dimsA[3]**2,env.chi), dtype=env.dtype, device=env.device)
+        env.T[(coord,vec)] = cytnx.UniTensor(cytnx.zeros([env.chi,dimsA[3]**2,env.chi], dtype=env.dtype, device=env.device))
         env.T[(coord,vec)][:min(env.chi,dimsA[2]**2),:,:min(env.chi,dimsA[4]**2)]=\
             a[:min(env.chi,dimsA[2]**2),:,:min(env.chi,dimsA[4]**2)]
 
@@ -474,11 +505,14 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
         #     2
         vec = (-1,0)
         A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
-        dimsA = A.size()
-        a = contiguous(einsum('meifg,maibc->eafbgc',A,conj(A)))
+        # dimsA = A.size()
+        dimsA = A.shape()
+        # a = contiguous(einsum('meifg,maibc->eafbgc',A,conj(A)))
+        a = contiguous(cytnx.ncon([A,conj(A)],[[1,-1,2,-3,-5],[1,-2,2,-4,-6]]))
         a = view(a, (dimsA[1]**2, dimsA[3]**2, dimsA[4]**2))
         a= _normalize_nograd(a)
-        env.T[(coord,vec)] = torch.zeros((env.chi,env.chi,dimsA[4]**2), dtype=env.dtype, device=env.device)
+        # env.T[(coord,vec)] = torch.zeros((env.chi,env.chi,dimsA[4]**2), dtype=env.dtype, device=env.device)
+        env.T[(coord,vec)] = cytnx.UniTensor(cytnx.zeros([env.chi,env.chi,dimsA[4]**2], dtype=env.dtype, device=env.device))
         env.T[(coord,vec)][:min(env.chi,dimsA[1]**2),:min(env.chi,dimsA[3]**2),:]=\
             a[:min(env.chi,dimsA[1]**2),:min(env.chi,dimsA[3]**2),:]
 
@@ -495,11 +529,14 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
         #     i
         vec = (0,1)
         A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
-        dimsA = A.size()
-        a = contiguous(einsum('mefig,mabic->eafbgc',A,conj(A)))
+        # dimsA = A.size()
+        dimsA = A.shape()
+        # a = contiguous(einsum('mefig,mabic->eafbgc',A,conj(A)))
+        a = contiguous(cytnx.ncon([A,conj(A)],[[1,-1,-3,2,-5],[1,-2,-4,2,-6]]))
         a = view(a, (dimsA[1]**2, dimsA[2]**2, dimsA[4]**2))
         a= _normalize_nograd(a)
-        env.T[(coord,vec)] = torch.zeros((dimsA[1]**2,env.chi,env.chi), dtype=env.dtype, device=env.device)
+        # env.T[(coord,vec)] = torch.zeros((dimsA[1]**2,env.chi,env.chi), dtype=env.dtype, device=env.device)
+        env.T[(coord,vec)] = cytnx.UniTensor(cytnx.zeros([dimsA[1]**2,env.chi,env.chi], dtype=env.dtype, device=env.device))
         env.T[(coord,vec)][:,:min(env.chi,dimsA[2]**2),:min(env.chi,dimsA[4]**2)]=\
             a[:,:min(env.chi,dimsA[2]**2),:min(env.chi,dimsA[4]**2)]
 
@@ -515,293 +552,296 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
         #     2
         vec = (1,0)
         A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
-        dimsA = A.size()
-        a = contiguous(einsum('mefgi,mabci->eafbgc',A,conj(A)))
+        # dimsA = A.size()
+        dimsA = A.shape()
+        # a = contiguous(einsum('mefgi,mabci->eafbgc',A,conj(A)))
+        a = contiguous(cytnx.ncon([A,conj(A)],[[1,-1,-3,-5,2],[1,-2,-4,-6,2]]))
         a = view(a, (dimsA[1]**2, dimsA[2]**2, dimsA[3]**2))
         a= _normalize_nograd(a)
-        env.T[(coord,vec)] = torch.zeros((env.chi,dimsA[2]**2,env.chi), dtype=env.dtype, device=env.device)
+        # env.T[(coord,vec)] = torch.zeros((env.chi,dimsA[2]**2,env.chi), dtype=env.dtype, device=env.device)
+        env.T[(coord,vec)] = cytnx.UniTensor(cytnx.zeros([env.chi,dimsA[2]**2,env.chi], dtype=env.dtype, device=env.device))
         env.T[(coord,vec)][:min(env.chi,dimsA[1]**2),:,:min(env.chi,dimsA[3]**2)]=\
             a[:min(env.chi,dimsA[1]**2),:,:min(env.chi,dimsA[3]**2)]
 
-def init_from_ipeps_obc(state, env, verbosity=0):
-    if verbosity>0:
-        print("ENV: init_from_ipeps_obc")
-    for coord, site in state.sites.items():
-        for rel_vec in [(-1,-1),(1,-1),(1,1),(-1,1)]:
-            env.C[(coord,rel_vec)] = torch.zeros(env.chi,env.chi, dtype=env.dtype, device=env.device)
+# def init_from_ipeps_obc(state, env, verbosity=0):
+#     if verbosity>0:
+#         print("ENV: init_from_ipeps_obc")
+#     for coord, site in state.sites.items():
+#         for rel_vec in [(-1,-1),(1,-1),(1,1),(-1,1)]:
+#             env.C[(coord,rel_vec)] = torch.zeros(env.chi,env.chi, dtype=env.dtype, device=env.device)
 
-        # Left-upper corner
-        #
-        #     i      = C--1     
-        # j--A--3      0
-        #   /\
-        #  2  m
-        #      \ k
-        #    l--A--3
-        #      /
-        #     2
-        vec = (-1,-1)
-        A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
-        dimsA = A.size()
-        if len(dimsA)==4:
-            a= torch.einsum('ijef->ef',A)
-        elif len(dimsA)==5:
-            a= torch.einsum('mijef,mklab->eafb',(A,A)).contiguous().view(dimsA[3]**2, dimsA[4]**2)
-        a= a/torch.max(torch.abs(a))
-        env.C[(coord,vec)][:min(env.chi,a.size(0)),:min(env.chi,a.size(1))]=\
-            a[:min(env.chi,a.size(0)),:min(env.chi,a.size(1))]
+#         # Left-upper corner
+#         #
+#         #     i      = C--1     
+#         # j--A--3      0
+#         #   /\
+#         #  2  m
+#         #      \ k
+#         #    l--A--3
+#         #      /
+#         #     2
+#         vec = (-1,-1)
+#         A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
+#         dimsA = A.size()
+#         if len(dimsA)==4:
+#             a= torch.einsum('ijef->ef',A)
+#         elif len(dimsA)==5:
+#             a= torch.einsum('mijef,mklab->eafb',(A,A)).contiguous().view(dimsA[3]**2, dimsA[4]**2)
+#         a= a/torch.max(torch.abs(a))
+#         env.C[(coord,vec)][:min(env.chi,a.size(0)),:min(env.chi,a.size(1))]=\
+#             a[:min(env.chi,a.size(0)),:min(env.chi,a.size(1))]
 
-        # right-upper corner
-        #
-        #     i      = 0--C     
-        # 1--A--j         1
-        #   /\
-        #  2  m
-        #      \ k
-        #    1--A--l
-        #      /
-        #     2
-        vec = (1,-1)
-        A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
-        dimsA = A.size()
-        if len(dimsA)==4:
-            a= torch.einsum('iefj->ef',A)
-        elif len(dimsA)==5:
-            a= torch.einsum('miefj,mkabl->eafb',(A,A)).contiguous().view(dimsA[2]**2, dimsA[3]**2)
-        a= a/torch.max(torch.abs(a))
-        env.C[(coord,vec)][:min(env.chi,a.size(0)),:min(env.chi,a.size(1))]=\
-            a[:min(env.chi,a.size(0)),:min(env.chi,a.size(1))]
+#         # right-upper corner
+#         #
+#         #     i      = 0--C     
+#         # 1--A--j         1
+#         #   /\
+#         #  2  m
+#         #      \ k
+#         #    1--A--l
+#         #      /
+#         #     2
+#         vec = (1,-1)
+#         A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
+#         dimsA = A.size()
+#         if len(dimsA)==4:
+#             a= torch.einsum('iefj->ef',A)
+#         elif len(dimsA)==5:
+#             a= torch.einsum('miefj,mkabl->eafb',(A,A)).contiguous().view(dimsA[2]**2, dimsA[3]**2)
+#         a= a/torch.max(torch.abs(a))
+#         env.C[(coord,vec)][:min(env.chi,a.size(0)),:min(env.chi,a.size(1))]=\
+#             a[:min(env.chi,a.size(0)),:min(env.chi,a.size(1))]
 
-        # right-lower corner
-        #
-        #     0      =    0     
-        # 1--A--j      1--C
-        #   /\
-        #  i  m
-        #      \ 0
-        #    1--A--l
-        #      /
-        #     k
-        vec = (1,1)
-        A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
-        dimsA = A.size()
-        if len(dimsA)==4:
-            a= torch.einsum('efij->ef',A)
-        elif len(dimsA)==5:
-            a= torch.einsum('mefij,mabkl->eafb',(A,A)).contiguous().view(dimsA[1]**2, dimsA[2]**2)
-        a= a/torch.max(torch.abs(a))
-        env.C[(coord,vec)][:min(env.chi,a.size(0)),:min(env.chi,a.size(1))]=\
-            a[:min(env.chi,a.size(0)),:min(env.chi,a.size(1))]
+#         # right-lower corner
+#         #
+#         #     0      =    0     
+#         # 1--A--j      1--C
+#         #   /\
+#         #  i  m
+#         #      \ 0
+#         #    1--A--l
+#         #      /
+#         #     k
+#         vec = (1,1)
+#         A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
+#         dimsA = A.size()
+#         if len(dimsA)==4:
+#             a= torch.einsum('efij->ef',A)
+#         elif len(dimsA)==5:
+#             a= torch.einsum('mefij,mabkl->eafb',(A,A)).contiguous().view(dimsA[1]**2, dimsA[2]**2)
+#         a= a/torch.max(torch.abs(a))
+#         env.C[(coord,vec)][:min(env.chi,a.size(0)),:min(env.chi,a.size(1))]=\
+#             a[:min(env.chi,a.size(0)),:min(env.chi,a.size(1))]
 
-        # left-lower corner
-        #
-        #     0      = 0     
-        # i--A--3      C--1
-        #   /\
-        #  j  m
-        #      \ 0
-        #    k--A--3
-        #      /
-        #     l
-        vec = (-1,1)
-        A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
-        dimsA = A.size()
-        if len(dimsA)==4:
-            a= torch.einsum('eijf->ef',A)
-        elif len(dimsA)==5:
-            a= torch.einsum('meijf,maklb->eafb',(A,A)).contiguous().view(dimsA[1]**2, dimsA[4]**2)
-        a= a/torch.max(torch.abs(a))
-        env.C[(coord,vec)][:min(env.chi,a.size(0)),:min(env.chi,a.size(1))]=\
-            a[:min(env.chi,a.size(0)),:min(env.chi,a.size(1))]
+#         # left-lower corner
+#         #
+#         #     0      = 0     
+#         # i--A--3      C--1
+#         #   /\
+#         #  j  m
+#         #      \ 0
+#         #    k--A--3
+#         #      /
+#         #     l
+#         vec = (-1,1)
+#         A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
+#         dimsA = A.size()
+#         if len(dimsA)==4:
+#             a= torch.einsum('eijf->ef',A)
+#         elif len(dimsA)==5:
+#             a= torch.einsum('meijf,maklb->eafb',(A,A)).contiguous().view(dimsA[1]**2, dimsA[4]**2)
+#         a= a/torch.max(torch.abs(a))
+#         env.C[(coord,vec)][:min(env.chi,a.size(0)),:min(env.chi,a.size(1))]=\
+#             a[:min(env.chi,a.size(0)),:min(env.chi,a.size(1))]
 
-        # upper transfer matrix
-        #
-        #     i      = 0--T--2     
-        # 1--A--3         1
-        #   /\
-        #  2  m
-        #      \ k
-        #    1--A--3
-        #      /
-        #     2
-        vec = (0,-1)
-        A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
-        dimsA = A.size()
-        if len(dimsA)==4:
-            a= torch.einsum('iefg->efg',A)
-        elif len(dimsA)==5:
-            a= torch.einsum('miefg,mkabc->eafbgc',(A,A)).contiguous().view(dimsA[2]**2, dimsA[3]**2, dimsA[4]**2)
-        a= a/torch.max(torch.abs(a))
-        env.T[(coord,vec)] = torch.zeros((env.chi,a.size(1),env.chi), dtype=env.dtype, device=env.device)
-        env.T[(coord,vec)][:min(env.chi,a.size(0)),:,:min(env.chi,a.size(2))]=\
-            a[:min(env.chi,a.size(0)),:,:min(env.chi,a.size(2))]
+#         # upper transfer matrix
+#         #
+#         #     i      = 0--T--2     
+#         # 1--A--3         1
+#         #   /\
+#         #  2  m
+#         #      \ k
+#         #    1--A--3
+#         #      /
+#         #     2
+#         vec = (0,-1)
+#         A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
+#         dimsA = A.size()
+#         if len(dimsA)==4:
+#             a= torch.einsum('iefg->efg',A)
+#         elif len(dimsA)==5:
+#             a= torch.einsum('miefg,mkabc->eafbgc',(A,A)).contiguous().view(dimsA[2]**2, dimsA[3]**2, dimsA[4]**2)
+#         a= a/torch.max(torch.abs(a))
+#         env.T[(coord,vec)] = torch.zeros((env.chi,a.size(1),env.chi), dtype=env.dtype, device=env.device)
+#         env.T[(coord,vec)][:min(env.chi,a.size(0)),:,:min(env.chi,a.size(2))]=\
+#             a[:min(env.chi,a.size(0)),:,:min(env.chi,a.size(2))]
 
-        # left transfer matrix
-        #
-        #     0      = 0     
-        # i--A--3      T--2
-        #   /\         1
-        #  2  m
-        #      \ 0
-        #    k--A--3
-        #      /
-        #     2
-        vec = (-1,0)
-        A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
-        dimsA = A.size()
-        if len(dimsA)==4:
-            a= torch.einsum('eifg->efg',A)
-        elif len(dimsA)==5:
-            a= torch.einsum('meifg,makbc->eafbgc',(A,A)).contiguous().view(dimsA[1]**2, dimsA[3]**2, dimsA[4]**2)
-        a= a/torch.max(torch.abs(a))
-        env.T[(coord,vec)] = torch.zeros((env.chi,env.chi,a.size(2)), dtype=env.dtype, device=env.device)
-        env.T[(coord,vec)][:min(env.chi,a.size(0)),:min(env.chi,a.size(1)),:]=\
-            a[:min(env.chi,a.size(0)),:min(env.chi,a.size(1)),:]
+#         # left transfer matrix
+#         #
+#         #     0      = 0     
+#         # i--A--3      T--2
+#         #   /\         1
+#         #  2  m
+#         #      \ 0
+#         #    k--A--3
+#         #      /
+#         #     2
+#         vec = (-1,0)
+#         A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
+#         dimsA = A.size()
+#         if len(dimsA)==4:
+#             a= torch.einsum('eifg->efg',A)
+#         elif len(dimsA)==5:
+#             a= torch.einsum('meifg,makbc->eafbgc',(A,A)).contiguous().view(dimsA[1]**2, dimsA[3]**2, dimsA[4]**2)
+#         a= a/torch.max(torch.abs(a))
+#         env.T[(coord,vec)] = torch.zeros((env.chi,env.chi,a.size(2)), dtype=env.dtype, device=env.device)
+#         env.T[(coord,vec)][:min(env.chi,a.size(0)),:min(env.chi,a.size(1)),:]=\
+#             a[:min(env.chi,a.size(0)),:min(env.chi,a.size(1)),:]
 
-        # lower transfer matrix
-        #
-        #     0      =    0     
-        # 1--A--3      1--T--2
-        #   /\
-        #  i  m
-        #      \ 0
-        #    1--A--3
-        #      /
-        #     k
-        vec = (0,1)
-        A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
-        dimsA = A.size()
-        if len(dimsA)==4:
-            a= torch.einsum('efig->efg',A)
-        elif len(dimsA)==5:
-            a= torch.einsum('mefig,mabkc->eafbgc',(A,A)).contiguous().view(dimsA[1]**2, dimsA[2]**2, dimsA[4]**2)
-        a= a/torch.max(torch.abs(a))
-        env.T[(coord,vec)] = torch.zeros((a.size(0),env.chi,env.chi), dtype=env.dtype, device=env.device)
-        env.T[(coord,vec)][:,:min(env.chi,a.size(1)),:min(env.chi,a.size(2))]=\
-            a[:,:min(env.chi,a.size(1)),:min(env.chi,a.size(2))]
+#         # lower transfer matrix
+#         #
+#         #     0      =    0     
+#         # 1--A--3      1--T--2
+#         #   /\
+#         #  i  m
+#         #      \ 0
+#         #    1--A--3
+#         #      /
+#         #     k
+#         vec = (0,1)
+#         A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
+#         dimsA = A.size()
+#         if len(dimsA)==4:
+#             a= torch.einsum('efig->efg',A)
+#         elif len(dimsA)==5:
+#             a= torch.einsum('mefig,mabkc->eafbgc',(A,A)).contiguous().view(dimsA[1]**2, dimsA[2]**2, dimsA[4]**2)
+#         a= a/torch.max(torch.abs(a))
+#         env.T[(coord,vec)] = torch.zeros((a.size(0),env.chi,env.chi), dtype=env.dtype, device=env.device)
+#         env.T[(coord,vec)][:,:min(env.chi,a.size(1)),:min(env.chi,a.size(2))]=\
+#             a[:,:min(env.chi,a.size(1)),:min(env.chi,a.size(2))]
 
-        # right transfer matrix
-        #
-        #     0      =    0     
-        # 1--A--i      1--T
-        #   /\            2
-        #  2  m
-        #      \ 0
-        #    1--A--k
-        #      /
-        #     2
-        vec = (1,0)
-        A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
-        dimsA = A.size()
-        if len(dimsA)==4:
-            a= torch.einsum('efgi->efg',A)
-        elif len(dimsA)==5:
-            a= torch.einsum('mefgi,mabck->eafbgc',(A,A)).contiguous().view(dimsA[1]**2, dimsA[2]**2, dimsA[3]**2)
-        a= a/torch.max(torch.abs(a))
-        env.T[(coord,vec)] = torch.zeros((env.chi,a.size(1),env.chi), dtype=env.dtype, device=env.device)
-        env.T[(coord,vec)][:min(env.chi,a.size(0)),:,:min(env.chi,a.size(2))]=\
-            a[:min(env.chi,a.size(0)),:,:min(env.chi,a.size(2))]
+#         # right transfer matrix
+#         #
+#         #     0      =    0     
+#         # 1--A--i      1--T
+#         #   /\            2
+#         #  2  m
+#         #      \ 0
+#         #    1--A--k
+#         #      /
+#         #     2
+#         vec = (1,0)
+#         A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
+#         dimsA = A.size()
+#         if len(dimsA)==4:
+#             a= torch.einsum('efgi->efg',A)
+#         elif len(dimsA)==5:
+#             a= torch.einsum('mefgi,mabck->eafbgc',(A,A)).contiguous().view(dimsA[1]**2, dimsA[2]**2, dimsA[3]**2)
+#         a= a/torch.max(torch.abs(a))
+#         env.T[(coord,vec)] = torch.zeros((env.chi,a.size(1),env.chi), dtype=env.dtype, device=env.device)
+#         env.T[(coord,vec)][:min(env.chi,a.size(0)),:,:min(env.chi,a.size(2))]=\
+#             a[:min(env.chi,a.size(0)),:,:min(env.chi,a.size(2))]
 
-def init_prod_overlap(state1, state2, env, verbosity=0):
-    for key,t in env.C.items():
-        env.C[key]= torch.zeros(t.size(), dtype=env.dtype, device=env.device)
-        env.C[key][0,0]= 1.0 + 0.j if env.C[key].is_complex() else 1.0
+# def init_prod_overlap(state1, state2, env, verbosity=0):
+#     for key,t in env.C.items():
+#         env.C[key]= torch.zeros(t.size(), dtype=env.dtype, device=env.device)
+#         env.C[key][0,0]= 1.0 + 0.j if env.C[key].is_complex() else 1.0
 
-    for coord, site in state1.sites.items():
-        # upper transfer matrix
-        #
-        #     i      = 0--T--2
-        # 1--A1--3        1
-        #   /\
-        #  2  m
-        #      \ i
-        #    1--A2--3
-        #      /
-        #     2
-        vec = (0,-1)
-        A1 = state1.site((coord[0]+vec[0],coord[1]+vec[1]))
-        A2 = state2.site((coord[0]+vec[0],coord[1]+vec[1]))
-        dimsA = A1.size()
-        a = contiguous(einsum('miefg,miebg->fb',A1,conj(A2)))
-        a = view(a, (dimsA[3]**2))
-        a= a/a.abs().max()
-        env.T[(coord,vec)]= torch.zeros((env.chi,dimsA[3]**2,env.chi), dtype=env.dtype, device=env.device)
-        env.T[(coord,vec)][0,:,0]= a
+#     for coord, site in state1.sites.items():
+#         # upper transfer matrix
+#         #
+#         #     i      = 0--T--2
+#         # 1--A1--3        1
+#         #   /\
+#         #  2  m
+#         #      \ i
+#         #    1--A2--3
+#         #      /
+#         #     2
+#         vec = (0,-1)
+#         A1 = state1.site((coord[0]+vec[0],coord[1]+vec[1]))
+#         A2 = state2.site((coord[0]+vec[0],coord[1]+vec[1]))
+#         dimsA = A1.size()
+#         a = contiguous(einsum('miefg,miebg->fb',A1,conj(A2)))
+#         a = view(a, (dimsA[3]**2))
+#         a= a/a.abs().max()
+#         env.T[(coord,vec)]= torch.zeros((env.chi,dimsA[3]**2,env.chi), dtype=env.dtype, device=env.device)
+#         env.T[(coord,vec)][0,:,0]= a
 
-        # left transfer matrix
-        #
-        #     0      = 0
-        # i--A1--3     T--2
-        #   /\         1
-        #  2  m
-        #      \ 0
-        #    i--A2--3
-        #      /
-        #     2
-        vec = (-1,0)
-        A1 = state1.site((coord[0] + vec[0], coord[1] + vec[1]))
-        A2 = state2.site((coord[0] + vec[0], coord[1] + vec[1]))
-        dimsA = A1.size()
-        a = contiguous(einsum('meifg,meifc->gc',A1,conj(A2)))
-        a = view(a, (dimsA[4]**2))
-        a= a/a.abs().max()
-        env.T[(coord,vec)] = torch.zeros((env.chi,env.chi,dimsA[4]**2), dtype=env.dtype, device=env.device)
-        env.T[(coord,vec)][0,0,:]= a
+#         # left transfer matrix
+#         #
+#         #     0      = 0
+#         # i--A1--3     T--2
+#         #   /\         1
+#         #  2  m
+#         #      \ 0
+#         #    i--A2--3
+#         #      /
+#         #     2
+#         vec = (-1,0)
+#         A1 = state1.site((coord[0] + vec[0], coord[1] + vec[1]))
+#         A2 = state2.site((coord[0] + vec[0], coord[1] + vec[1]))
+#         dimsA = A1.size()
+#         a = contiguous(einsum('meifg,meifc->gc',A1,conj(A2)))
+#         a = view(a, (dimsA[4]**2))
+#         a= a/a.abs().max()
+#         env.T[(coord,vec)] = torch.zeros((env.chi,env.chi,dimsA[4]**2), dtype=env.dtype, device=env.device)
+#         env.T[(coord,vec)][0,0,:]= a
 
-        # lower transfer matrix
-        #
-        #     0      =    0
-        # 1--A1--3     1--T--2
-        #   /\
-        #  i  m
-        #      \ 0
-        #    1--A2--3
-        #      /
-        #     i
-        vec = (0,1)
-        A1 = state1.site((coord[0] + vec[0], coord[1] + vec[1]))
-        A2 = state2.site((coord[0] + vec[0], coord[1] + vec[1]))
-        dimsA = A1.size()
-        a = contiguous(einsum('mefig,mafig->ea',A1,conj(A2)))
-        a = view(a, (dimsA[1]**2))
-        a= a/a.abs().max()
-        env.T[(coord,vec)] = torch.zeros((dimsA[1]**2,env.chi,env.chi), dtype=env.dtype, device=env.device)
-        env.T[(coord,vec)][:,0,0]= a
+#         # lower transfer matrix
+#         #
+#         #     0      =    0
+#         # 1--A1--3     1--T--2
+#         #   /\
+#         #  i  m
+#         #      \ 0
+#         #    1--A2--3
+#         #      /
+#         #     i
+#         vec = (0,1)
+#         A1 = state1.site((coord[0] + vec[0], coord[1] + vec[1]))
+#         A2 = state2.site((coord[0] + vec[0], coord[1] + vec[1]))
+#         dimsA = A1.size()
+#         a = contiguous(einsum('mefig,mafig->ea',A1,conj(A2)))
+#         a = view(a, (dimsA[1]**2))
+#         a= a/a.abs().max()
+#         env.T[(coord,vec)] = torch.zeros((dimsA[1]**2,env.chi,env.chi), dtype=env.dtype, device=env.device)
+#         env.T[(coord,vec)][:,0,0]= a
 
-        # right transfer matrix
-        #
-        #     0      =    0
-        # 1--A1--i     1--T
-        #   /\            2
-        #  2  m
-        #      \ 0
-        #    1--A2--i
-        #      /
-        #     2
-        vec = (1,0)
-        A1 = state1.site((coord[0] + vec[0], coord[1] + vec[1]))
-        A2 = state2.site((coord[0] + vec[0], coord[1] + vec[1]))
-        dimsA = A1.size()
-        a = contiguous(einsum('mefgi,mebgi->fb',A1,conj(A2)))
-        a = view(a, (dimsA[2]**2))
-        a= a/a.abs().max()
-        env.T[(coord,vec)] = torch.zeros((env.chi,dimsA[2]**2,env.chi), dtype=env.dtype, device=env.device)
-        env.T[(coord,vec)][0,:,0]= a
+#         # right transfer matrix
+#         #
+#         #     0      =    0
+#         # 1--A1--i     1--T
+#         #   /\            2
+#         #  2  m
+#         #      \ 0
+#         #    1--A2--i
+#         #      /
+#         #     2
+#         vec = (1,0)
+#         A1 = state1.site((coord[0] + vec[0], coord[1] + vec[1]))
+#         A2 = state2.site((coord[0] + vec[0], coord[1] + vec[1]))
+#         dimsA = A1.size()
+#         a = contiguous(einsum('mefgi,mebgi->fb',A1,conj(A2)))
+#         a = view(a, (dimsA[2]**2))
+#         a= a/a.abs().max()
+#         env.T[(coord,vec)] = torch.zeros((env.chi,dimsA[2]**2,env.chi), dtype=env.dtype, device=env.device)
+#         env.T[(coord,vec)][0,:,0]= a
 
-def print_env(env, verbosity=0):
-    print("dtype "+str(env.dtype))
-    print("device "+str(env.device))
+# def print_env(env, verbosity=0):
+#     print("dtype "+str(env.dtype))
+#     print("device "+str(env.device))
 
-    for key,t in env.C.items():
-        print(str(key)+" "+str(t.size()))
-        if verbosity>0: 
-            print(t)
-    for key,t in env.T.items():
-        print(str(key)+" "+str(t.size()))
-        if verbosity>0:
-            print(t)
+#     for key,t in env.C.items():
+#         print(str(key)+" "+str(t.size()))
+#         if verbosity>0: 
+#             print(t)
+#     for key,t in env.T.items():
+#         print(str(key)+" "+str(t.size()))
+#         if verbosity>0:
+#             print(t)
 
-@torch.no_grad()
+# @torch.no_grad()
 def ctmrg_conv_specC(state, env, history, p='inf', ctm_args=cfg.ctm_args):
     r"""
     :param state: wavefunction

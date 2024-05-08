@@ -140,73 +140,151 @@ def ctm_get_projectors_4x2(direction, coord, state, env, ctm_args=cfg.ctm_args, 
 # direction-independent function performing bi-diagonalization
 #####################################################################
 
-def ctm_get_projectors_from_matrices(R, Rt, chi, ctm_args=cfg.ctm_args, \
-    global_args=cfg.global_args, diagnostics=None):
-    r"""
-    :param R: tensor of shape (dim0, dim1)
-    :param Rt: tensor of shape (dim0, dim1)
-    :param chi: environment bond dimension
-    :param ctm_args: CTM algorithm configuration
-    :param global_args: global configuration
-    :type R: cytnx.tensor 
-    :type Rt: cytnx.tensor
-    :type chi: int
-    :type ctm_args: CTMARGS
-    :type global_args: GLOBALARGS
-    :return: pair of projectors P, Pt, tensors of dimension :math:`\chi \times \chi \times D^2`. 
-             The D might vary depending on the auxiliary bond dimension of related on-site
-             tensor.
-    :rtype: cytnx.tensor, cytnx.tensor
+# def ctm_get_projectors_from_matrices(R, Rt, chi, ctm_args=cfg.ctm_args, \
+#     global_args=cfg.global_args, diagnostics=None):
+#     r"""
+#     :param R: tensor of shape (dim0, dim1)
+#     :param Rt: tensor of shape (dim0, dim1)
+#     :param chi: environment bond dimension
+#     :param ctm_args: CTM algorithm configuration
+#     :param global_args: global configuration
+#     :type R: cytnx.tensor 
+#     :type Rt: cytnx.tensor
+#     :type chi: int
+#     :type ctm_args: CTMARGS
+#     :type global_args: GLOBALARGS
+#     :return: pair of projectors P, Pt, tensors of dimension :math:`\chi \times \chi \times D^2`. 
+#              The D might vary depending on the auxiliary bond dimension of related on-site
+#              tensor.
+#     :rtype: cytnx.tensor, cytnx.tensor
 
-    Given the two tensors R and Rt (R tilde) compute the projectors P, Pt (P tilde)
-    (PRB 94, 075143 (2016) https://arxiv.org/pdf/1402.2859.pdf)
+#     Given the two tensors R and Rt (R tilde) compute the projectors P, Pt (P tilde)
+#     (PRB 94, 075143 (2016) https://arxiv.org/pdf/1402.2859.pdf)
         
-        1. Perform SVD over :math:`R\widetilde{R}` contracted through index which is going to
-           be truncated::
+#         1. Perform SVD over :math:`R\widetilde{R}` contracted through index which is going to
+#            be truncated::
            
-                       _______          ______
-                dim1--|___R___|--dim0--|__Rt__|--dim1  ==SVD==> dim1(R)--U--S--V^+--dim1(Rt) 
+#                        _______          ______
+#                 dim1--|___R___|--dim0--|__Rt__|--dim1  ==SVD==> dim1(R)--U--S--V^+--dim1(Rt) 
 
-           Hence, for the inverse :math:`(R\widetilde{R})^{-1}`::
+#            Hence, for the inverse :math:`(R\widetilde{R})^{-1}`::
               
-                       ________          ________
-                dim1--|__Rt^-1_|--dim0--|__R^-1__|--dim1 = dim1(Rt)--V--S^-1--U^+--dim1(R) 
+#                        ________          ________
+#                 dim1--|__Rt^-1_|--dim0--|__R^-1__|--dim1 = dim1(Rt)--V--S^-1--U^+--dim1(R) 
 
-        2. Approximate an identity :math:`RR^{-1}\widetilde{R}^{-1}\widetilde{R}` by truncating
-           the result of :math:`SVD(R\widetilde{R}^{-1})`::
+#         2. Approximate an identity :math:`RR^{-1}\widetilde{R}^{-1}\widetilde{R}` by truncating
+#            the result of :math:`SVD(R\widetilde{R}^{-1})`::
 
-                           ____          ______          _______          ____
-                I = dim0--|_R__|--dim1--|_R^-1_|--dim0--|_Rt^-1_|--dim1--|_Rt_|--dim0
-                           ____          _____                            ____          ____
-                I ~ dim0--|_R__|--dim1--|_U^+_|--St^-1/2--\chi--St^-1/2--|_V__|--dim1--|_Rt_|--dim0
+#                            ____          ______          _______          ____
+#                 I = dim0--|_R__|--dim1--|_R^-1_|--dim0--|_Rt^-1_|--dim1--|_Rt_|--dim0
+#                            ____          _____                            ____          ____
+#                 I ~ dim0--|_R__|--dim1--|_U^+_|--St^-1/2--\chi--St^-1/2--|_V__|--dim1--|_Rt_|--dim0
         
-           where :math:`\widetilde{S}` has been truncated to the leading :math:`\chi` singular values    
+#            where :math:`\widetilde{S}` has been truncated to the leading :math:`\chi` singular values    
         
-        3. Finally construct the projectors :math:`P, \widetilde{P}`::
+#         3. Finally construct the projectors :math:`P, \widetilde{P}`::
                 
-                           ____          _____
-                P = dim0--|_R__|--dim1--|_U^+_|--St^-1/2--\chi
-                                     ____          ____
-                Pt = \chi--St^-1/2--|_V__|--dim1--|_Rt_|--dim0
+#                            ____          _____
+#                 P = dim0--|_R__|--dim1--|_U^+_|--St^-1/2--\chi
+#                                      ____          ____
+#                 Pt = \chi--St^-1/2--|_V__|--dim1--|_Rt_|--dim0
 
-        The projectors :math:`P, \widetilde{P}` approximate contraction of the original
-        matrices :math:`R, \widetilde{R}`::
+#         The projectors :math:`P, \widetilde{P}` approximate contraction of the original
+#         matrices :math:`R, \widetilde{R}`::
                         
-             _______     _________
-            |___R___| ~ |___R_____|
-             _|___|_      |     |
-            |___Rt__|    dim0  dim1
-                        __|___  |                                         
-                        \_Pt__/ |
-                          |     |
-                         chi    |
-                         _|__   |
-                        /_P _\  |
-                          |     |    
-                         dim0  dim1
-                         _|_____|_
-                        |____Rt___|
-    """
+#              _______     _________
+#             |___R___| ~ |___R_____|
+#              _|___|_      |     |
+#             |___Rt__|    dim0  dim1
+#                         __|___  |                                         
+#                         \_Pt__/ |
+#                           |     |
+#                          chi    |
+#                          _|__   |
+#                         /_P _\  |
+#                           |     |    
+#                          dim0  dim1
+#                          _|_____|_
+#                         |____Rt___|
+#     """
+#     assert R.shape() == Rt.shape()
+#     assert len(R.shape()) == 2
+#     verbosity = ctm_args.verbosity_projectors
+
+#     if ctm_args.projector_svd_method=='DEFAULT' or ctm_args.projector_svd_method in ['GESDD','GESDD_CPU']:
+#         # returns U, S, V of M= USV^\dag
+#         if ctm_args.projector_svd_method=="GESDD_CPU":
+#             def truncated_svd(M, chi):
+#                 _M= M.cpu()
+#                 # _USV= truncated_svd_gesdd(_M, chi, keep_multiplets=True, \
+#                 #     abs_tol=ctm_args.projector_multiplet_abstol,\
+#                 #     eps_multiplet=ctm_args.projector_eps_multiplet, verbosity=ctm_args.verbosity_projectors,\
+#                 #     diagnostics=diagnostics)
+#                 _USV = cytnx.linalg.Gesvd_truncate(_M,chi,1e-10,True,True,0)
+#                 return (x.to(device=M.device) for x in _USV)
+#         else:
+#             def truncated_svd(M, chi):
+#                 # return truncated_svd_gesdd(M, chi, keep_multiplets=True, \
+#                 #     abs_tol=ctm_args.projector_multiplet_abstol,\
+#                 #     eps_multiplet=ctm_args.projector_eps_multiplet, verbosity=ctm_args.verbosity_projectors,\
+#                 #     diagnostics=diagnostics)
+#                 return cytnx.linalg.Gesvd_truncate(M,chi,1e-10,True,True,0)
+#     # elif ctm_args.projector_svd_method=='AF':
+#     #     def truncated_svd(M, chi):
+#     #         return truncated_svd_af(M, chi, keep_multiplets=True, \
+#     #             abs_tol=ctm_args.projector_multiplet_abstol,\
+#     #             eps_multiplet=ctm_args.projector_eps_multiplet, verbosity=ctm_args.verbosity_projectors,\
+#     #             diagnostics=diagnostics)
+#     # elif ctm_args.projector_svd_method == 'ARP':
+#     #     def truncated_svd(M, chi):
+#     #         return truncated_svd_arnoldi(M, chi, keep_multiplets=True, \
+#     #             abs_tol=ctm_args.projector_multiplet_abstol, \
+#     #             eps_multiplet=ctm_args.projector_eps_multiplet, verbosity=ctm_args.verbosity_projectors)
+#     else:
+#         raise(f"Projector svd method \"{cfg.ctm_args.projector_svd_method}\" not implemented")
+
+#     #  SVD decomposition
+#     if ctm_args.fwd_checkpoint_projectors:
+#         M = checkpoint(mm, transpose(R), Rt)
+#     else:
+#         M = mm(transpose(R), Rt)
+#     # U, S, V = truncated_svd(M, chi) # M = USV^{T}
+#     S, U, V = truncated_svd(M, chi) # M = USV^{T}
+#     print(S[0])
+#     # # S_nz = S[S/S[0].item() > ctm_args.projector_svd_reltol]
+#     # S_nz = cytnx.UniTensor(cytnx.zeros(S.shape()[0]),is_diag=True)
+#     S_nz = S
+#     S_sqrt= S*0
+    
+#     # S_sqrt[:S_nz.size(0)]= torch.rsqrt(S_nz)
+#     S_sqrt[:S_nz.shape()[0]]= rsqrt(S_nz)
+    
+#     if verbosity>0:
+#         log.info(f"{diagnostics}")
+#     if verbosity>1: print(S_sqrt)
+
+#     # Construct projectors
+#     expr='ij,j->ij'
+#     def P_Pt_c(*tensors):
+#         R, Rt, U, V, S_sqrt= tensors
+#         # return mm(R, conj(U))*S_sqrt[None,:], mm(Rt,V)*S_sqrt[None,:]
+#         S_sqrt_ = cytnx.UniTensor(cytnx.zeros([1,S_sqrt.shape()[0]]))
+#         S_sqrt_[0,:] = S_sqrt
+#         # return mm(R, conj(U))*S_sqrt[None,:], mm(Rt,V)*S_sqrt[None,:]
+#         #return mm(R, conj(U))*S_sqrt_, mm(Rt,V)*S_sqrt_
+#         print(R.shape())
+#         print(conj(U).shape())
+#         print(Rt.shape())
+#         print(V.shape())
+#         return mm(R, conj(U))*S_sqrt_, mm(Rt,V.Transpose())*S_sqrt_
+#     tensors= R, Rt, U, V, S_sqrt
+#     if ctm_args.fwd_checkpoint_projectors:
+#         return checkpoint(P_Pt_c, *tensors)
+#     else:
+#         return P_Pt_c(*tensors)
+
+def ctm_get_projectors_from_matrices(R, Rt, chi, ctm_args=cfg.ctm_args,
+                                     global_args=cfg.global_args, diagnostics=None):
     assert R.shape() == Rt.shape()
     assert len(R.shape()) == 2
     verbosity = ctm_args.verbosity_projectors
@@ -216,17 +294,19 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, ctm_args=cfg.ctm_args, \
         if ctm_args.projector_svd_method=="GESDD_CPU":
             def truncated_svd(M, chi):
                 _M= M.cpu()
-                _USV= truncated_svd_gesdd(_M, chi, keep_multiplets=True, \
-                    abs_tol=ctm_args.projector_multiplet_abstol,\
-                    eps_multiplet=ctm_args.projector_eps_multiplet, verbosity=ctm_args.verbosity_projectors,\
-                    diagnostics=diagnostics)
+                # _USV= truncated_svd_gesdd(_M, chi, keep_multiplets=True, \
+                #     abs_tol=ctm_args.projector_multiplet_abstol,\
+                #     eps_multiplet=ctm_args.projector_eps_multiplet, verbosity=ctm_args.verbosity_projectors,\
+                #     diagnostics=diagnostics)
+                _USV = cytnx.linalg.Gesvd_truncate(_M,chi,0,True,True,0)
                 return (x.to(device=M.device) for x in _USV)
         else:
             def truncated_svd(M, chi):
-                return truncated_svd_gesdd(M, chi, keep_multiplets=True, \
-                    abs_tol=ctm_args.projector_multiplet_abstol,\
-                    eps_multiplet=ctm_args.projector_eps_multiplet, verbosity=ctm_args.verbosity_projectors,\
-                    diagnostics=diagnostics)
+                # return truncated_svd_gesdd(M, chi, keep_multiplets=True, \
+                #     abs_tol=ctm_args.projector_multiplet_abstol,\
+                #     eps_multiplet=ctm_args.projector_eps_multiplet, verbosity=ctm_args.verbosity_projectors,\
+                #     diagnostics=diagnostics)
+                return cytnx.linalg.Gesvd_truncate(M,chi,0,True,True,0)
     # elif ctm_args.projector_svd_method=='AF':
     #     def truncated_svd(M, chi):
     #         return truncated_svd_af(M, chi, keep_multiplets=True, \
@@ -240,32 +320,18 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, ctm_args=cfg.ctm_args, \
     #             eps_multiplet=ctm_args.projector_eps_multiplet, verbosity=ctm_args.verbosity_projectors)
     else:
         raise(f"Projector svd method \"{cfg.ctm_args.projector_svd_method}\" not implemented")
-
-    #  SVD decomposition
-    if ctm_args.fwd_checkpoint_projectors:
-        M = checkpoint(mm, transpose(R), Rt)
-    else:
-        M = mm(transpose(R), Rt)
-    U, S, V = truncated_svd(M, chi) # M = USV^{T}
-
-    S_nz= S[S/S[0] > ctm_args.projector_svd_reltol]
-    S_sqrt= S*0
     
-    # S_sqrt[:S_nz.size(0)]= torch.rsqrt(S_nz)
-    S_sqrt[:S_nz.size(0)]= rsqrt(S_nz)
-    
-    if verbosity>0:
-        log.info(f"{diagnostics}")
-    if verbosity>1: print(S_sqrt)
-
-    # Construct projectors
-    expr='ij,j->ij'
-    def P_Pt_c(*tensors):
-        R, Rt, U, V, S_sqrt= tensors
-        return mm(R, conj(U))*S_sqrt[None,:], mm(Rt,V)*S_sqrt[None,:]
-
-    tensors= R, Rt, U, V, S_sqrt
     if ctm_args.fwd_checkpoint_projectors:
-        return checkpoint(P_Pt_c, *tensors)
+        M = checkpoint(mm, R, transpose(Rt))
     else:
-        return P_Pt_c(*tensors)
+        M = mm(R, transpose(Rt))
+    S, U, V = truncated_svd(M, chi)  # M = USV^{T}
+
+    # print("projector!!")
+    # torch.set_printoptions(profile="full")
+    # torch.set_printoptions(linewidth=200)
+    # print((U.t().conj()@U)[0:6, 0:6])
+    # print((U.t().conj()@U)[0:6, 0:6])
+    # print(U.Transpose().Conj().Transpose().shape())
+    # print(U.shape())
+    return  U.Transpose().Conj().Transpose(), U

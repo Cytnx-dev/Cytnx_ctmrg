@@ -47,14 +47,14 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
     #  --A--
     #   /
     #
-    # if not ctm_args.ctm_force_dl or len(next(iter(state.sites.values())).size())==4:
+    # if not ctm_args.ctm_force_dl or len(next(iter(state.sites.values())).shape())==4:
     if not ctm_args.ctm_force_dl or len(next(iter(state.sites.values())).shape())==4:
         stateDL= state
-    # elif len(next(iter(state.sites.values())).size())==5:
+    # elif len(next(iter(state.sites.values())).shape())==5:
     elif len(next(iter(state.sites.values())).shape())==5:
         sitesDL=dict()
         for coord,A in state.sites.items():
-            # dimsA = A.size()
+            # dimsA = A.shape()
             dimsA = A.shape()
             # a = contiguous(einsum('mefgh,mabcd->eafbgchd',A,conj(A)))
             a = cytnx.ncon([A,conj(A)],[[1,-1,-3,-5,-7],[1,-2,-4,-6,-8]])
@@ -125,7 +125,7 @@ def run_overlap(state1, state2, env, conv_check=None, ctm_args=cfg.ctm_args, glo
     for coord,site in state1.sites.items():
         A1 = state1.site((coord[0], coord[1]))
         A2 = state2.site((coord[0], coord[1]))
-        dimsA = A1.size()
+        dimsA = A1.shape()
         a = contiguous(einsum('mefgh,mabcd->eafbgchd',A1,conj(A2)))
         a = view(a, (dimsA[1]**2,dimsA[2]**2, dimsA[3]**2, dimsA[4]**2))
         sitesDL[coord]=a
@@ -239,7 +239,7 @@ def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.globa
             P[coord], Pt[coord] = ctm_get_projectors(direction, coord, state_loc, env_loc,\
                 ctm_args, global_args, diagnostics=diagnostics)
             if verbosity>0:
-                log.info("P,Pt RIGHT "+str(coord)+" P: "+str(P[coord].size())+" Pt: "+str(Pt[coord].size()))
+                log.info("P,Pt RIGHT "+str(coord)+" P: "+str(P[coord].shape())+" Pt: "+str(Pt[coord].shape()))
             if verbosity>1:
                 print(P[coord])
                 print(Pt[coord])
@@ -316,13 +316,12 @@ def absorb_truncate_CTM_MOVE_UP(coord, state, env, P, Pt, ctm_args=cfg.ctm_args)
     coord_shift_right = state.vertexToSite((coord[0]+vec[0], coord[1]+vec[1]))
     tensors= env.C[(coord,(1,-1))], env.T[(coord,(1,0))], env.T[(coord,(0,-1))], \
         env.T[(coord,(-1,0))], env.C[(coord,(-1,-1))], state.site(coord), \
-        view(P[coord], (env.chi,state.site(coord_shift_left).size(3+mode)**(mode+1),env.chi)), \
-        view(Pt[coord], (env.chi,state.site(coord).size(1+mode)**(mode+1),env.chi)), \
-        view(P[coord_shift_right], (env.chi,state.site(coord).size(3+mode)**(mode+1),env.chi)), \
-        view(Pt[coord_shift_right], (env.chi,state.site(coord_shift_right).size(1+mode)**(mode+1),env.chi))
+        view(P[coord], (env.chi,state.site(coord_shift_left).shape()[3+mode]**(mode+1),env.chi)), \
+        view(Pt[coord], (env.chi,state.site(coord).shape()[1+mode]**(mode+1),env.chi)), \
+        view(P[coord_shift_right], (env.chi,state.site(coord).shape()[3+mode]**(mode+1),env.chi)), \
+        view(Pt[coord_shift_right], (env.chi,state.site(coord_shift_right).shape()[1+mode]**(mode+1),env.chi))
     if mode:
-        print("mode = True, not implemented!")
-        exit()
+        tensors += (cytnx.UniTensor.ones(shape = [1], labels = ["a"],dtype = cytnx.Type.Bool, device = -1, name = ""),)
         #tensors += (torch.ones(1,dtype=torch.bool),)
 
     if cfg.ctm_args.fwd_checkpoint_absorb:
@@ -392,14 +391,14 @@ def absorb_truncate_CTM_MOVE_UP_c(*tensors):
         #
         # 0--T--2
         #    1
-        T= T.view([T.size(0)]+[A.size(1)]*2+[T.size(2)])
+        T= T.reshape(*tuple([T.shape()[0]]+[A.shape()[1]]*2+[T.shape()[2]]))
         #
         #      /--0
         # 2--Pt2--1
-        Pt2= Pt2.view([Pt2.size(0)]+[A.size(2)]*2+[Pt2.size(2)])
+        Pt2= Pt2.reshape(*tuple([Pt2.shape()[0]]+[A.shape()[2]]*2+[Pt2.shape()[2]]))
         #      0--\
         #      1--P1--2
-        P1= P1.view([P1.size(0)]+[A.size(4)]*2+[P1.size(2)])
+        P1= P1.reshape(*tuple([P1.shape()[0]]+[A.shape()[4]]*2+[P1.shape()[2]]))
 
         #        --(0)0 0--T----3 3(0)------
         #       |          1, 2             |
@@ -410,9 +409,15 @@ def absorb_truncate_CTM_MOVE_UP_c(*tensors):
         #        --(2)9 9-----a*--11 11(2)-- 
         #                  |  | 
         #                  5  6
-        nT= torch.einsum(T,[0,1,2,3],Pt2,[0,8,9,4],A,[12,1,8,5,10],A.conj(),[12,2,9,6,11],\
-            P1,[3,10,11,7],[4,5,6,7])
-        nT= nT.view(nT.size(0),nT.size(1)*nT.size(2),nT.size(3))
+        # nT= torch.einsum(T,[0,1,2,3],Pt2,[0,8,9,4],A,[12,1,8,5,10],A.conj(),[12,2,9,6,11],\
+        #     P1,[3,10,11,7],[4,5,6,7])
+        net = cytnx.Network()
+        net.FromString(["T:0,1,2,3","Pt2:0,8,9,4","A:12,1,8,5,10","Aconj:12,2,9,6,11","P1:3,10,11,7","TOUT:4,5,6,7"])
+        net.PutUniTensors(["T","Pt2","A","Aconj","P1"],[T,Pt2,A,A.Conj(),P1])
+        nT = net.Launch()
+        #nT= cytnx.ncon([T,Pt2,A,A.Conj(),P1],[[13,1,2,3],[13,8,9,-1],[12,1,8,-2,10],[12,2,9,-3,11],[3,10,11,-4]])
+        # print("s2")
+        nT= nT.reshape(nT.shape()[0],nT.shape()[1]*nT.shape()[2],nT.shape()[3])
 
     # Assign new C,T 
     #
@@ -434,13 +439,12 @@ def absorb_truncate_CTM_MOVE_LEFT(coord, state, env, P, Pt, ctm_args=cfg.ctm_arg
     coord_shift_down= state.vertexToSite((coord[0]-vec[0], coord[1]-vec[1]))
     tensors = env.C[(coord,(-1,-1))], env.T[(coord,(0,-1))], env.T[(coord,(-1,0))], \
         env.T[(coord,(0,1))], env.C[(coord,(-1,1))], state.site(coord), \
-        view(P[coord], (env.chi,state.site(coord_shift_down).size(0+mode)**(mode+1),env.chi)), \
-        view(Pt[coord], (env.chi,state.site(coord).size(2+mode)**(mode+1),env.chi)), \
-        view(P[coord_shift_up], (env.chi,state.site(coord).size(0+mode)**(mode+1),env.chi)), \
-        view(Pt[coord_shift_up], (env.chi,state.site(coord_shift_up).size(2+mode)**(mode+1),env.chi))
+        view(P[coord], (env.chi,state.site(coord_shift_down).shape()[0+mode]**(mode+1),env.chi)), \
+        view(Pt[coord], (env.chi,state.site(coord).shape()[2+mode]**(mode+1),env.chi)), \
+        view(P[coord_shift_up], (env.chi,state.site(coord).shape()[0+mode]**(mode+1),env.chi)), \
+        view(Pt[coord_shift_up], (env.chi,state.site(coord_shift_up).shape()[2+mode]**(mode+1),env.chi))
     if mode:
-        print("mode = True, not implemented!")
-        exit()
+        tensors += (cytnx.UniTensor.ones(shape = [1], labels = ["a"],dtype = cytnx.Type.Bool, device = -1, name = ""),)
         # tensors += (torch.ones(1,dtype=torch.bool),)
 
     if cfg.ctm_args.fwd_checkpoint_absorb:
@@ -508,16 +512,16 @@ def absorb_truncate_CTM_MOVE_LEFT_c(*tensors):
         # 0
         # T--2
         # 1
-        T= T.view(list(T.size()[:2])+[A.size(2)]*2)
+        T= T.reshape(*tuple(list(T.shape()[:2])+[A.shape()[2]]*2))
         #
         #   2
         # --P1--
         # 0    1
-        P1= P1.view([P1.size(0)]+[A.size(1)]*2+[P1.size(2)])
+        P1= P1.reshape(*tuple([P1.shape()[0]]+[A.shape()[1]]*2+[P1.shape()[2]]))
         # 0     1
         # --Pt2--
         #   2
-        Pt2= Pt2.view([Pt2.size(0)]+[A.size(3)]*2+[Pt2.size(2)])
+        Pt2= Pt2.reshape(*tuple([Pt2.shape()[0]]+[A.shape()[3]]*2+[Pt2.shape()[2]]))
 
         #   9(3)
         # --P1-------------
@@ -530,9 +534,15 @@ def absorb_truncate_CTM_MOVE_LEFT_c(*tensors):
         # |           6(1) 7(2)     
         # --Pt2-------------
         #   12(3) 
-        nT= torch.einsum(T,[0,1,2,3],Pt2,[1,6,7,12],A,[8,4,2,6,10],A.conj(),[8,5,3,7,11],\
-            P1,[0,4,5,9],[9,12,10,11])
-        nT= nT.view(nT.size(0), nT.size(1), nT.size(2)*nT.size(3))
+        # nT= torch.einsum(T,[0,1,2,3],Pt2,[1,6,7,12],A,[8,4,2,6,10],A.conj(),[8,5,3,7,11],\
+        #     P1,[0,4,5,9],[9,12,10,11])
+        net = cytnx.Network()
+        net.FromString(["T:0,1,2,3","Pt2:1,6,7,12","A:8,4,2,6,10","Aconj:8,5,3,7,11","P1:0,4,5,9","TOUT:9,12,10,11"])
+        net.PutUniTensors(["T","Pt2","A","Aconj","P1"],[T,Pt2,A,A.Conj(),P1])
+        nT = net.Launch()
+        
+        # nT= cytnx.ncon([T,Pt2,A,A.Conj(),P1],[[0,1,2,3],[1,6,7,-2],[8,4,2,6,-3],[8,5,3,7,-4],[0,4,5,-1]])
+        nT= nT.reshape(nT.shape()[0], nT.shape()[1], nT.shape()[2]*nT.shape()[3])
 
     # Assign new C,T 
     #
@@ -562,13 +572,12 @@ def absorb_truncate_CTM_MOVE_DOWN(coord, state, env, P, Pt, ctm_args=cfg.ctm_arg
     coord_shift_left = state.vertexToSite((coord[0]+vec[0], coord[1]+vec[1]))
     tensors= env.C[(coord,(-1,1))], env.T[(coord,(-1,0))], env.T[(coord,(0,1))], \
         env.T[(coord,(1,0))], env.C[(coord,(1,1))], state.site(coord), \
-        view(P[coord], (env.chi,state.site(coord_shift_right).size(1+mode)**(mode+1),env.chi)), \
-        view(Pt[coord], (env.chi,state.site(coord).size(3+mode)**(mode+1),env.chi)), \
-        view(P[coord_shift_left], (env.chi,state.site(coord).size(1+mode)**(mode+1),env.chi)), \
-        view(Pt[coord_shift_left], (env.chi,state.site(coord_shift_left).size(3+mode)**(mode+1),env.chi))
+        view(P[coord], (env.chi,state.site(coord_shift_right).shape()[1+mode]**(mode+1),env.chi)), \
+        view(Pt[coord], (env.chi,state.site(coord).shape()[3+mode]**(mode+1),env.chi)), \
+        view(P[coord_shift_left], (env.chi,state.site(coord).shape()[1+mode]**(mode+1),env.chi)), \
+        view(Pt[coord_shift_left], (env.chi,state.site(coord_shift_left).shape()[3+mode]**(mode+1),env.chi))
     if mode:
-        print("mode = True, not implemented!")
-        exit()
+        tensors += (cytnx.UniTensor.ones(shape = [1], labels = ["a"],dtype = cytnx.Type.Bool, device = -1, name = ""),)
         # tensors += (torch.ones(1,dtype=torch.bool),)
 
     if cfg.ctm_args.fwd_checkpoint_absorb:
@@ -638,14 +647,14 @@ def absorb_truncate_CTM_MOVE_DOWN_c(*tensors):
         #  
         #    0
         # 1--T--2
-        T= T.view([A.size(3)]*2+list(T.size()[1:]))
+        T= T.reshape(*tuple([A.shape()[3]]*2+list(T.shape()[1:])))
         #
         #     /--1
         # 2--P1--0
-        P1= P1.view([P1.size(0)]+[A.size(2)]*2+[P1.size(2)])
+        P1= P1.reshape(*tuple([P1.shape()[0]]+[A.shape()[2]]*2+[P1.shape()[2]]))
         #      1--\
         #      0--Pt2--2
-        Pt2= Pt2.view([Pt2.size(0)]+[A.size(4)]*2+[Pt2.size(2)])
+        Pt2= Pt2.reshape(*tuple([Pt2.shape()[0]]+[A.shape()[4]]*2+[Pt2.shape()[2]]))
 
         #                  5  6
         #        --(1)8 8--a--|---10 10(1)--
@@ -656,9 +665,14 @@ def absorb_truncate_CTM_MOVE_DOWN_c(*tensors):
         # (3)4--P1         0  1             Pt2--7(3)
         #       |          |, |             |
         #        --(0)2 2--T----3 3(0)------
-        nT= torch.einsum(T,[0,1,2,3],Pt2,[3,10,11,7],A,[12,5,8,0,10],A.conj(),[12,6,9,1,11],\
-            P1,[2,8,9,4],[5,6,4,7])
-        nT= nT.view(nT.size(0)*nT.size(1),nT.size(2),nT.size(3))
+        # nT= torch.einsum(T,[0,1,2,3],Pt2,[3,10,11,7],A,[12,5,8,0,10],A.conj(),[12,6,9,1,11],\
+        #     P1,[2,8,9,4],[5,6,4,7])
+        net = cytnx.Network()
+        net.FromString(["T:0,1,2,3","Pt2:3,10,11,7","A:12,5,8,0,10","Aconj:12,6,9,1,11","P1:2,8,9,4","TOUT:5,6,4,7"])
+        net.PutUniTensors(["T","Pt2","A","Aconj","P1"],[T,Pt2,A,A.Conj(),P1])
+        nT = net.Launch()
+        # nT = cytnx.ncon([T,Pt2,A,A.Conj(),P1],[[0,1,2,3],[3,10,11,-4],[12,-1,8,0,10],[12,-2,9,1,11],[2,8,9,-3]])
+        nT= nT.reshape(nT.shape()[0]*nT.shape()[1],nT.shape()[2],nT.shape()[3])
 
     # Assign new C,T
     # 
@@ -680,13 +694,12 @@ def absorb_truncate_CTM_MOVE_RIGHT(coord, state, env, P, Pt, ctm_args=cfg.ctm_ar
     coord_shift_up = state.vertexToSite((coord[0]-vec[0], coord[1]-vec[1]))
     tensors= env.C[(coord,(1,1))], env.T[(coord,(0,1))], env.T[(coord,(1,0))], \
         env.T[(coord,(0,-1))], env.C[(coord,(1,-1))], state.site(coord), \
-        view(P[coord], (env.chi,state.site(coord_shift_up).size(2+mode)**(mode+1),env.chi)), \
-        view(Pt[coord], (env.chi,state.site(coord).size(0+mode)**(mode+1),env.chi)), \
-        view(P[coord_shift_down], (env.chi,state.site(coord).size(2+mode)**(mode+1),env.chi)), \
-        view(Pt[coord_shift_down], (env.chi,state.site(coord_shift_down).size(0+mode)**(mode+1),env.chi))
+        view(P[coord], (env.chi,state.site(coord_shift_up).shape()[2+mode]**(mode+1),env.chi)), \
+        view(Pt[coord], (env.chi,state.site(coord).shape()[0+mode]**(mode+1),env.chi)), \
+        view(P[coord_shift_down], (env.chi,state.site(coord).shape()[2+mode]**(mode+1),env.chi)), \
+        view(Pt[coord_shift_down], (env.chi,state.site(coord_shift_down).shape()[0+mode]**(mode+1),env.chi))
     if mode:
-        print("mode = True, not implemented!")
-        exit()
+        tensors += (cytnx.UniTensor.ones(shape = [1], labels = ["a"],dtype = cytnx.Type.Bool, device = -1, name = ""),)
         # tensors += (torch.ones(1,dtype=torch.bool),)
 
     if cfg.ctm_args.fwd_checkpoint_absorb:
@@ -752,16 +765,16 @@ def absorb_truncate_CTM_MOVE_RIGHT_c(*tensors):
         #    0
         # 1--T
         #    2
-        T= T.view([T.size(0)]+[A.size(2)]*2+[T.size(2)])
+        T= T.reshape(*tuple([T.shape()[0]]+[A.shape()[2]]*2+[T.shape()[2]]))
         #
         #   2
         # --Pt2--
         # 1     0
-        Pt2= Pt2.view([Pt2.size(0)]+[A.size(1)]*2+[Pt2.size(2)])
+        Pt2= Pt2.reshape(*tuple([Pt2.shape()[0]]+[A.shape()[1]]*2+[Pt2.shape()[2]]))
         # 1     0
         # --P1--
         #   2
-        P1= P1.view([P1.size(0)]+[A.size(3)]*2+[P1.size(2)])
+        P1= P1.reshape(*tuple([P1.shape()[0]]+[A.shape()[3]]*2+[P1.shape()[2]]))
 
         #                        9(3)
         #         ---------------Pt2----
@@ -774,9 +787,15 @@ def absorb_truncate_CTM_MOVE_RIGHT_c(*tensors):
         #         6(1) 7(2)            |
         #         ---------------P1-----
         #                        12(3) 
-        nT= torch.einsum(T,[0,1,2,3],Pt2,[0,4,5,9],A,[8,4,10,6,1],A.conj(),[8,5,11,7,2],\
-            P1,[3,6,7,12],[9,10,11,12])
-        nT= nT.view(nT.size(0), nT.size(1)*nT.size(2), nT.size(3))
+        # nT= torch.einsum(T,[0,1,2,3],Pt2,[0,4,5,9],A,[8,4,10,6,1],A.conj(),[8,5,11,7,2],\
+        #     P1,[3,6,7,12],[9,10,11,12])
+        net = cytnx.Network()
+        net.FromString(["T:0,1,2,3","Pt2:0,4,5,9","A:8,4,10,6,1","Aconj:8,5,11,7,2","P1:3,6,7,12","TOUT:9,10,11,12"])
+        net.PutUniTensors(["T","Pt2","A","Aconj","P1"],[T,Pt2,A,A.Conj(),P1])
+        nT = net.Launch()
+        # nT= cytnx.ncon([T,Pt2,A,A.Conj(),P1],[[0,1,2,3],[0,4,5,-1],[8,4,-2,6,1],[8,5,-3,7,2],[3,6,7,-4]])
+        
+        nT= nT.reshape(nT.shape()[0], nT.shape()[1]*nT.shape()[2], nT.shape()[3])
     
     # Assign new C,T 
     #

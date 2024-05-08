@@ -25,8 +25,8 @@ import cytnx
 # def conj(t):
 #     return t.conj()
 
-def contract(t1, t2, *args):
-    return cytnx.UniTensor(cytnx.linalg.tensordot(t1.get_block(), t2.get_block(), *args))
+def contract(t1, t2, axis,*args):
+    return cytnx.UniTensor(cytnx.linalg.Tensordot(t1.get_block(), t2.get_block(), *(axis),*args))
 
 def mm(m1, m2):
     return cytnx.UniTensor(cytnx.linalg.Matmul(m1.get_block(), m2.get_block()))

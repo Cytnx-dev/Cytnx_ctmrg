@@ -47,13 +47,17 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
     #  --A--
     #   /
     #
-    if not ctm_args.ctm_force_dl or len(next(iter(state.sites.values())).size())==4:
+    # if not ctm_args.ctm_force_dl or len(next(iter(state.sites.values())).size())==4:
+    if not ctm_args.ctm_force_dl or len(next(iter(state.sites.values())).shape())==4:
         stateDL= state
-    elif len(next(iter(state.sites.values())).size())==5:
+    # elif len(next(iter(state.sites.values())).size())==5:
+    elif len(next(iter(state.sites.values())).shape())==5:
         sitesDL=dict()
         for coord,A in state.sites.items():
-            dimsA = A.size()
-            a = contiguous(einsum('mefgh,mabcd->eafbgchd',A,conj(A)))
+            # dimsA = A.size()
+            dimsA = A.shape()
+            # a = contiguous(einsum('mefgh,mabcd->eafbgchd',A,conj(A)))
+            a = cytnx.ncon([A,conj(A)],[[1,-1,-3,-5,-7],[1,-2,-4,-6,-8]])
             a= view(a, (dimsA[1]**2,dimsA[2]**2, dimsA[3]**2, dimsA[4]**2))
             sitesDL[coord]=a
         stateDL = IPEPS(sites=sitesDL,vertexToSite=state.vertexToSite,lX=state.lX,lY=state.lY,\

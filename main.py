@@ -29,7 +29,7 @@ def main():
     # print(", ".join(["epoch","energy"]+obs_labels))
     # print(", ".join([f"{-1}",f"{e_curr0}"]+[f"{v}" for v in obs_values0]))
 
-    # ctm_env_init, *ctm_log= ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_energy)
+    ctm_env_init, *ctm_log= ctmrg.run(state, ctm_env_init, conv_check= ctmrg_conv_specC)
 
     # # 6) compute final observables
     # e_curr0 = energy_f(state, ctm_env_init)

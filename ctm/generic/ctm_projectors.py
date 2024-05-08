@@ -207,8 +207,8 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, ctm_args=cfg.ctm_args, \
                          _|_____|_
                         |____Rt___|
     """
-    assert R.shape == Rt.shape
-    assert len(R.shape) == 2
+    assert R.shape() == Rt.shape()
+    assert len(R.shape()) == 2
     verbosity = ctm_args.verbosity_projectors
 
     if ctm_args.projector_svd_method=='DEFAULT' or ctm_args.projector_svd_method in ['GESDD','GESDD_CPU']:
@@ -227,17 +227,17 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, ctm_args=cfg.ctm_args, \
                     abs_tol=ctm_args.projector_multiplet_abstol,\
                     eps_multiplet=ctm_args.projector_eps_multiplet, verbosity=ctm_args.verbosity_projectors,\
                     diagnostics=diagnostics)
-    elif ctm_args.projector_svd_method=='AF':
-        def truncated_svd(M, chi):
-            return truncated_svd_af(M, chi, keep_multiplets=True, \
-                abs_tol=ctm_args.projector_multiplet_abstol,\
-                eps_multiplet=ctm_args.projector_eps_multiplet, verbosity=ctm_args.verbosity_projectors,\
-                diagnostics=diagnostics)
-    elif ctm_args.projector_svd_method == 'ARP':
-        def truncated_svd(M, chi):
-            return truncated_svd_arnoldi(M, chi, keep_multiplets=True, \
-                abs_tol=ctm_args.projector_multiplet_abstol, \
-                eps_multiplet=ctm_args.projector_eps_multiplet, verbosity=ctm_args.verbosity_projectors)
+    # elif ctm_args.projector_svd_method=='AF':
+    #     def truncated_svd(M, chi):
+    #         return truncated_svd_af(M, chi, keep_multiplets=True, \
+    #             abs_tol=ctm_args.projector_multiplet_abstol,\
+    #             eps_multiplet=ctm_args.projector_eps_multiplet, verbosity=ctm_args.verbosity_projectors,\
+    #             diagnostics=diagnostics)
+    # elif ctm_args.projector_svd_method == 'ARP':
+    #     def truncated_svd(M, chi):
+    #         return truncated_svd_arnoldi(M, chi, keep_multiplets=True, \
+    #             abs_tol=ctm_args.projector_multiplet_abstol, \
+    #             eps_multiplet=ctm_args.projector_eps_multiplet, verbosity=ctm_args.verbosity_projectors)
     else:
         raise(f"Projector svd method \"{cfg.ctm_args.projector_svd_method}\" not implemented")
 

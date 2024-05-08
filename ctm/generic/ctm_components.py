@@ -380,7 +380,7 @@ def c2x2_LU_c(*tensors):
         # permute 0123->1203
         # reshape (12)(03)->01
         C2x2 = contiguous(permute(C2x2,(1,2,0,3)))
-        C2x2 = view(C2x2,(T2.size(1)*A.size(2),T1.size(2)*A.size(3)))
+        C2x2 = view(C2x2,(T2.shape()[1]*A.shape()[2],T1.shape()[2]*A.shape()[3]))
     else:
         # flops D^4 x (D^4 \chi^2 p^2)
         #
@@ -394,8 +394,8 @@ def c2x2_LU_c(*tensors):
         # permute 012345->140523
         # reshape (14)(05)23->0123
         C2x2 = contiguous(permute(C2x2,(1,4,0,5,2,3)))
-        C2x2 = view(C2x2,(T2.size(1)*A.size(4),T1.size(2)*A.size(5),\
-            A.size(0),A.size(1)))
+        C2x2 = view(C2x2,(T2.shape()[1]*A.shape()[4],T1.shape()[2]*A.shape()[5],\
+            A.shape()[0],A.shape()[1]))
 
     # C2x2--1
     # |\
@@ -418,8 +418,8 @@ def c2x2_LU_sl_c(*tensors):
     # T2--2->3
     # 1->2
     C2x2 = contract(C2x2, T2, ([0],[0]))
-    C2x2 = view(C2x2, (a.size(1),a.size(1),T1.size(2),\
-        T2.size(1),a.size(2),a.size(2)) )
+    C2x2 = view(C2x2, (a.shape()[1],a.shape()[1],T1.shape()[2],\
+        T2.shape()[1],a.shape()[2],a.shape()[2]) )
 
     # flops D^2 x (D^4 \chi^2 p)
     #
@@ -444,7 +444,7 @@ def c2x2_LU_sl_c(*tensors):
         # permute 012345->124035
         # reshape (124)(035)->01
         C2x2 = contiguous(permute(C2x2,(1,2,4,0,3,5)))
-        C2x2 = view(C2x2,(T2.size(1)*(a.size(3)**2),T1.size(2)*(a.size(4)**2)))
+        C2x2 = view(C2x2,(T2.shape()[1]*(a.shape()[3]**2),T1.shape()[2]*(a.shape()[4]**2)))
     else:
         # flops D^2 x (D^4 \chi^2 p^2)
         #
@@ -458,8 +458,8 @@ def c2x2_LU_sl_c(*tensors):
         # permute 01234567->13604725
         # reshape (136)(047)25->0123
         C2x2 = contiguous(permute(C2x2,(1,3,6,0,4,7,2,5)))
-        C2x2 = view(C2x2,(T2.size(1)*(a.size(3)**2),T1.size(2)*(a.size(4)**2),
-            a.size(0),a.size(0)))
+        C2x2 = view(C2x2,(T2.shape()[1]*(a.shape()[3]**2),T1.shape()[2]*(a.shape()[4]**2),
+            a.shape()[0],a.shape()[0]))
 
     # C2x2--1
     # |\
@@ -550,7 +550,7 @@ def c2x2_RU_c(*tensors):
         # permute 0123->1203
         # reshape (12)(03)->01
         C2x2 = contiguous(permute(C2x2,(1,2,0,3)))
-        C2x2 = view(C2x2,(T2.size(0)*A.size(1),T1.size(2)*A.size(2)))
+        C2x2 = view(C2x2,(T2.shape()[0]*A.shape()[1],T1.shape()[2]*A.shape()[2]))
     else:
         #    1<-2--T2------C
         #          3       |
@@ -561,8 +561,8 @@ def c2x2_RU_c(*tensors):
         # permute 012345->140523
         # reshape (14)(05)23->0123
         C2x2 = contiguous(permute(C2x2,(1,4,0,5,2,3)))
-        C2x2 = view(C2x2,(T2.size(0)*A.size(3),T1.size(2)*A.size(4),\
-            A.size(0),A.size(1)))
+        C2x2 = view(C2x2,(T2.shape()[0]*A.shape()[3],T1.shape()[2]*A.shape()[4],\
+            A.shape()[0],A.shape()[1]))
  
     # 0--C2x2
     #    |\
@@ -583,8 +583,8 @@ def c2x2_RU_sl_c(*tensors):
     #          0<-1--T1
     #             1<-2
     C2x2 = contract(C2x2, T2, ([0],[2]))
-    C2x2 = view(C2x2, (a.size(4),a.size(4),T1.size(2),T2.size(0),\
-        a.size(1),a.size(1)) )
+    C2x2 = view(C2x2, (a.shape()[4],a.shape()[4],T1.shape()[2],T2.shape()[0],\
+        a.shape()[1],a.shape()[1]) )
 
     # 2<-3--T2------C
     #       4,5     |
@@ -605,7 +605,7 @@ def c2x2_RU_sl_c(*tensors):
         # permute 012345->124035
         # reshape (124)(035)->01
         C2x2 = contiguous(permute(C2x2,(1,2,4,0,3,5)))
-        C2x2 = view(C2x2,(T2.size(0)*(a.size(2)**2),T1.size(2)*(a.size(3)**2)))
+        C2x2 = view(C2x2,(T2.shape()[0]*(a.shape()[2]**2),T1.shape()[2]*(a.shape()[3]**2)))
     else:
         #    1--T2------C
         #       |       |
@@ -617,8 +617,8 @@ def c2x2_RU_sl_c(*tensors):
         # permute 01234567->12603745
         # reshape (136)(047)25->0123
         C2x2 = contiguous(permute(C2x2,(1,3,6,0,4,7,2,5)))
-        C2x2 = view(C2x2,(T2.size(0)*(a.size(2)**2),T1.size(2)*(a.size(3)**2),
-            a.size(0),a.size(0)))
+        C2x2 = view(C2x2,(T2.shape()[0]*(a.shape()[2]**2),T1.shape()[2]*(a.shape()[3]**2),
+            a.shape()[0],a.shape()[0]))
      
     # 0--C2x2
     #    |\
@@ -706,7 +706,7 @@ def c2x2_RD_c(*tensors):
         # permute 0123->1203
         # reshape (12)(03)->01
         C2x2 = contiguous(permute(C2x2,(1,2,0,3)))
-        C2x2 = view(C2x2,(T2.size(0)*A.size(0),T1.size(1)*A.size(1)))
+        C2x2 = view(C2x2,(T2.shape()[0]*A.shape()[0],T1.shape()[1]*A.shape()[1]))
     else:
         #       4<-2    1<-2
         #    5<-3--A--5 3--T2
@@ -718,8 +718,8 @@ def c2x2_RD_c(*tensors):
         # permute 012345->140523
         # reshape (14)(05)23->0123
         C2x2 = contiguous(permute(C2x2,(1,4,0,5,2,3)))
-        C2x2 = view(C2x2,(T2.size(0)*A.size(2),T1.size(1)*A.size(3),\
-            A.size(0),A.size(1)))
+        C2x2 = view(C2x2,(T2.shape()[0]*A.shape()[2],T1.shape()[1]*A.shape()[3],\
+            A.shape()[0],A.shape()[1]))
 
     #    0 optionally(2,3)
     #    |/
@@ -738,8 +738,8 @@ def c2x2_RD_sl_c(*tensors):
     #    0<-1    0
     # 1<-2--T1---C
     C2x2 = contract(C2x2, T2, ([0],[2]))
-    C2x2 = view(C2x2, (a.size(3),a.size(3),T1.size(1),\
-        T2.size(0), a.size(4), a.size(4)) )
+    C2x2 = view(C2x2, (a.shape()[3],a.shape()[3],T1.shape()[1],\
+        T2.shape()[0], a.shape()[4], a.shape()[4]) )
 
     #    5<-1    2<-3
     # 6<-2--a--4 4--T2
@@ -758,7 +758,7 @@ def c2x2_RD_sl_c(*tensors):
         # permute 012345->124035
         # reshape (124)(035)->01
         C2x2 = contiguous(permute(C2x2,(1,2,4,0,3,5)))
-        C2x2 = view(C2x2,(T2.size(0)*(a.size(1)**2),T1.size(1)*(a.size(2)**2)))
+        C2x2 = view(C2x2,(T2.shape()[0]*(a.shape()[1]**2),T1.shape()[1]*(a.shape()[2]**2)))
     else:
         #       3,6     1
         #  4,7-a*a------T2
@@ -769,8 +769,8 @@ def c2x2_RD_sl_c(*tensors):
         # permute 01234567->13604725
         # reshape (136)(047)25->0123
         C2x2 = contiguous(permute(C2x2,(1,3,6,0,4,7,2,5)))
-        C2x2 = view(C2x2,(T2.size(0)*(a.size(1)**2),T1.size(1)*(a.size(2)**2),
-            a.size(0),a.size(0)))
+        C2x2 = view(C2x2,(T2.shape()[0]*(a.shape()[1]**2),T1.shape()[1]*(a.shape()[2]**2),
+            a.shape()[0],a.shape()[0]))
 
 
     #    0 optionally(2,3)
@@ -861,7 +861,7 @@ def c2x2_LD_c(*tensors):
         # permute 0123->0213
         # reshape (02)(13)->01
         C2x2 = contiguous(permute(C2x2,(0,2,1,3)))
-        C2x2 = view(C2x2,(T1.size(0)*A.size(0),T2.size(2)*A.size(3)))
+        C2x2 = view(C2x2,(T1.shape()[0]*A.shape()[0],T2.shape()[2]*A.shape()[3]))
     else:
         # 0        2->4
         # T1--1 3--A--5
@@ -872,8 +872,8 @@ def c2x2_LD_c(*tensors):
         # permute 012345->041523
         # reshape (04)(15)23->0123
         C2x2 = contiguous(permute(C2x2,(0,4,1,5,2,3)))
-        C2x2 = view(C2x2,(T1.size(0)*A.size(2),T2.size(2)*A.size(5),
-            A.size(0),A.size(1)))
+        C2x2 = view(C2x2,(T1.shape()[0]*A.shape()[2],T2.shape()[2]*A.shape()[5],
+            A.shape()[0],A.shape()[1]))
 
     # 0 optionally(2,3)
     # |/
@@ -895,8 +895,8 @@ def c2x2_LD_sl_c(*tensors):
     # |       0->2
     # C--0 1--T2--2->3
     C2x2 = contract(C2x2, T2, ([0],[1]))
-    C2x2 = view(C2x2, (T1.size(0),a.size(2),a.size(2),
-        a.size(3),a.size(3),T2.size(2)) )
+    C2x2 = view(C2x2, (T1.shape()[0],a.shape()[2],a.shape()[2],
+        a.shape()[3],a.shape()[3],T2.shape()[2]) )
 
     # 0        1->5
     # T1--1 2--a--4->6
@@ -915,7 +915,7 @@ def c2x2_LD_sl_c(*tensors):
         # permute 012345->024135
         # reshape (024)(135)->01
         C2x2 = contiguous(permute(C2x2,(0,2,4,1,3,5)))
-        C2x2 = view(C2x2,(T1.size(0)*(a.size(1)**2),T2.size(2)*(a.size(4)**2)))
+        C2x2 = view(C2x2,(T1.shape()[0]*(a.shape()[1]**2),T2.shape()[2]*(a.shape()[4]**2)))
     else:
         # 0        3,6
         # T1------a*a--4,7
@@ -926,8 +926,8 @@ def c2x2_LD_sl_c(*tensors):
         # permute 01234567->03614725
         # reshape (036)(147)25->0123
         C2x2 = contiguous(permute(C2x2,(0,3,6,1,4,7,2,5)))
-        C2x2 = view(C2x2,(T1.size(0)*(a.size(1)**2),T2.size(2)*(a.size(4)**2),
-            a.size(0),a.size(0)))
+        C2x2 = view(C2x2,(T1.shape()[0]*(a.shape()[1]**2),T2.shape()[2]*(a.shape()[4]**2),
+            a.shape()[0],a.shape()[0]))
 
 
     # 0 optionally(2,3)

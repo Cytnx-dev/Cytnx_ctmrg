@@ -1,4 +1,4 @@
-import cytnx
+# import cytnx
 
 # # tensors
 # A = cytnx.UniTensor.zeros(shape = [2,3,4], labels = ["a","b","c"],dtype = 3, device = -1, name = "zero")+9
@@ -50,8 +50,8 @@ import cytnx
 # const unsigned int & 	return_err = 0 
 # )	
 # svdval
-A = cytnx.UniTensor.uniform(shape = [30,30],low = 0, high = 1, in_labels = ["a","b"], seed = -1, dtype = 3, device = -1, name = "random")
-print(cytnx.linalg.Gesvd_truncate(A,20,1e-10,True,True,0)[0])
+# A = cytnx.UniTensor.uniform(shape = [30,30],low = 0, high = 1, in_labels = ["a","b"], seed = -1, dtype = 3, device = -1, name = "random")
+# print(cytnx.linalg.Gesvd_truncate(A,20,1e-10,True,True,0)[0])
 
 # #abs max
 # print(cytnx.UniTensor.ones(shape = [6,4,3], labels = ["a","b","C"],dtype = cytnx.Type.Double, device = -1, name = "").get_block().Abs().Max())
@@ -64,22 +64,35 @@ print(cytnx.linalg.Gesvd_truncate(A,20,1e-10,True,True,0)[0])
 # print(int(cytnx.Type.ComplexDouble))
 # print(cytnx.__version__)
 
-net = cytnx.Network()
-net.FromString(["c0: t0-c0, t3-c0",\
-                "c1: t1-c1, t0-c1",\
-                "c2: t2-c2, t1-c2",\
-                "c3: t3-c3, t2-c3",\
-                "t0: t0-c1, w-t0, t0-c0",\
-                "t1: t1-c2, w-t1, t1-c1",\
-                "t2: t2-c3, w-t2, t2-c2",\
-                "t3: t3-c0, w-t3, t3-c3",\
-                "w: w-t0, w-t1, w-t2, w-t3",\
-                "TOUT:",\
-                "ORDER: ((((((((c0,t0),c1),t3),w),t1),c3),t2),c2)"])
+# net = cytnx.Network()
+# net.FromString(["c0: t0-c0, t3-c0",\
+#                 "c1: t1-c1, t0-c1",\
+#                 "c2: t2-c2, t1-c2",\
+#                 "c3: t3-c3, t2-c3",\
+#                 "t0: t0-c1, w-t0, t0-c0",\
+#                 "t1: t1-c2, w-t1, t1-c1",\
+#                 "t2: t2-c3, w-t2, t2-c2",\
+#                 "t3: t3-c0, w-t3, t3-c3",\
+#                 "w: w-t0, w-t1, w-t2, w-t3",\
+#                 "TOUT:",\
+#                 "ORDER: ((((((((c0,t0),c1),t3),w),t1),c3),t2),c2)"])
 
 ## none indexing
 
+# import numpy as np
+# a = np.ones([100])
+# b = a[None,:10]
+# print(b.shape)
+
+import torch
 import numpy as np
-a = np.ones([100])
-b = a[None,:10]
-print(b.shape)
+d = 2
+D = 4
+chi = 100
+T = torch.zeros([chi,D,D,chi])
+Pt2 =  torch.zeros([chi,D,D,chi])
+P1 =  torch.zeros([chi,D,D,chi])
+A = torch.zeros([d,D,D,D,D])
+
+nT= np.einsum_path(T,[0,1,2,3],Pt2,[0,8,9,4],A,[12,1,8,5,10],A.conj(),[12,2,9,6,11],P1,[3,10,11,7],[4,5,6,7], optimize='optimal')[0]
+print(nT)

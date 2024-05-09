@@ -10,12 +10,13 @@ from ctm.generic import ctmrg
 # parse command line args and build necessary configuration objects
 parser= cfg.get_args_parser()
 parser.add_argument("--tensor", default="TFIM.cytnx", help="Input building block tensor for iPEPS.")
+parser.add_argument("--bondim", type=int, default=2)
 args, unknown_args = parser.parse_known_args()
 
 def main():
     cfg.configure(args)
 
-    tmp = cytnx.UniTensor.uniform(shape = [2,2,2,2,2],low = 0, high = 1, in_labels = ["a","b","c","d","e"], seed = -1, dtype = 3, device = -1, name = "random")
+    tmp = cytnx.UniTensor.uniform(shape = [2,args.bondim,args.bondim,args.bondim,args.bondim],low = 0, high = 1, in_labels = ["a","b","c","d","e"], seed = -1, dtype = 3, device = -1, name = "random")
     tmp= tmp/tmp.get_block().Abs().Max().item()
     sites = {(0,0): tmp}
     state = IPEPS(sites)
@@ -23,7 +24,7 @@ def main():
     # def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
     #     return False, history
 
-    ctm_env_init = ENV(8, state)
+    ctm_env_init = ENV(args.chi, state)
     init_env(state, ctm_env_init)
     
     # print(", ".join(["epoch","energy"]+obs_labels))
@@ -59,20 +60,20 @@ def main():
             for i in range(4*env.chi):
                 history.append(new[i])
         history.append(diff)
-        print("diff={0:<50}".format(diff), end="\r")
+        # print("diff={0:<50}".format(diff), end="\r")
         # print(ctm_args.ctm_conv_tol)
         if (len(history[4*env.chi:]) > 1 and diff < ctm_args.ctm_conv_tol)\
             or len(history[4*env.chi:]) >= ctm_args.ctm_max_iter:
             log.info({"history_length": len(history[4*env.chi:]), "history": history[4*env.chi:]})
             print("")
-            print("CTMRG length: "+str(len(history[4*env.chi:])))
+            # print("CTMRG length: "+str(len(history[4*env.chi:])))
             return True, history
         return False, history
 
 
     env, history, t_ctm, t_obs = ctmrg.run(state, ctm_env_init, conv_check= ctmrg_conv_C)
     print("t_ctm = ", t_ctm)
-    print("t_obs = ", t_obs)
+    # print("t_obs = ", t_obs)
     # # 6) compute final observables
     # e_curr0 = energy_f(state, ctm_env_init)
     # obs_values0, obs_labels = eval_obs_f(state,ctm_env_init)

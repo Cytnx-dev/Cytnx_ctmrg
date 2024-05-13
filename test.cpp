@@ -17,16 +17,22 @@ int main(){
 	cytnx::UniTensor Aconj = cytnx::UniTensor(cytnx::zeros({d,D,D,D,D})).set_labels({"12","2","9","6","11"});
     
 
-
-    // cytnx::Contract(T,cytnx::Contract(P1,cytnx::Contract(Pt2,cytnx::Contract(A,Aconj,false,false),false,false),false,false),false,false);
-    cytnx::UniTensor t1 = cytnx::Contract(A,Aconj,false,false);
-    cytnx::UniTensor t2 = cytnx::Contract(Pt2,t1,false,false);
-    
     // 計算開始時間
     start = clock();
-    cytnx::UniTensor t3 = cytnx::Contract(P1,t2,false,false);
+    // cytnx::Contract(T,cytnx::Contract(P1,cytnx::Contract(Pt2,cytnx::Contract(A,Aconj,true,true),true,true),true,true),true,true);
+
+    cytnx::UniTensor t1 = cytnx::Contract(A,Aconj,true,true);
+
+    cytnx::UniTensor t2 = cytnx::Contract(Pt2,T,true,true);
+
+    cytnx::UniTensor t3 = cytnx::Contract(t1,t2,true,true);
+
+    cytnx::UniTensor t4 = cytnx::Contract(P1,t3,true,true);
     // 計算結束時間
     end = clock();
+
+
+ 
     
     // 計算實際花費時間
     cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;

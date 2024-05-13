@@ -412,17 +412,19 @@ def absorb_truncate_CTM_MOVE_UP_c(*tensors):
         # nT= torch.einsum(T,[0,1,2,3],Pt2,[0,8,9,4],A,[12,1,8,5,10],A.conj(),[12,2,9,6,11],\
         #     P1,[3,10,11,7],[4,5,6,7])
         t0_net= time.perf_counter()
-        net = cytnx.Network()
-        net.FromString(["T:0,1,2,3","Pt2:0,8,9,4","A:12,1,8,5,10","Aconj:12,2,9,6,11","P1:3,10,11,7","TOUT:4,5,6,7","ORDER: (T,(P1,(Pt2,(A,Aconj))))"])
-        # net.FromString(["T:0,1,2,3","Pt2:0,8,9,4","A:12,1,8,5,10","Aconj:12,2,9,6,11","P1:3,10,11,7","TOUT:4,5,6,7","ORDER: ((((T,Pt2),A),Aconj),P1)"])
-        net.PutUniTensors(["T","Pt2","A","Aconj","P1"],[T,Pt2,A,A.Conj(),P1])
-        # net.setOrder(optimal = True)
-        # print(net.getOrder())
-        nT = net.Launch()
+        # net = cytnx.Network()
+        # net.FromString(["T:0,1,2,3","Pt2:0,8,9,4","A:12,1,8,5,10","Aconj:12,2,9,6,11","P1:3,10,11,7","TOUT:4,5,6,7","ORDER: (T,((P1,Pt2),(A,Aconj)))"])
+        # net.PutUniTensors(["T","Pt2","A","Aconj","P1"],[T,Pt2,A,A.Conj(),P1])
+        # nT = net.Launch()
+        
+        T = T.set_labels(["0","1","2","3"])
+        Pt2 = Pt2.set_labels(["0","8","9","4"])
+        P1 = P1.set_labels(["3","10","11","7"])
+        A = A.set_labels(["12","1","8","5","10"])
+        Aconj = A.Conj().set_labels(["12","2","9","6","11"])
+        nT = cytnx.Contract(T,cytnx.Contract(cytnx.Contract(P1,Pt2),cytnx.Contract(A,Aconj)))
         t1_net= time.perf_counter()
         print("net = ", t1_net-t0_net, end="\r")
-        #nT= cytnx.ncon([T,Pt2,A,A.Conj(),P1],[[13,1,2,3],[13,8,9,-1],[12,1,8,-2,10],[12,2,9,-3,11],[3,10,11,-4]])
-        # print("s2")
         nT= nT.reshape(nT.shape()[0],nT.shape()[1]*nT.shape()[2],nT.shape()[3])
 
     # Assign new C,T 

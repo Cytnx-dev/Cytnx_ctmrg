@@ -83,16 +83,63 @@
 # a = np.ones([100])
 # b = a[None,:10]
 # print(b.shape)
+# import torch
 
-import torch
+
+import numpy as np
+import time
+import cytnx
+import cProfile
+import re
+# def contract():
+
+d = 2
+D = 2
+chi = 64
+
+T = cytnx.UniTensor(cytnx.zeros([chi,D,D,chi])).set_labels(["0","1","2","3"])
+Pt2 = cytnx.UniTensor(cytnx.zeros([chi,D,D,chi])).set_labels(["0","8","9","4"])
+P1 = cytnx.UniTensor(cytnx.zeros([chi,D,D,chi])).set_labels(["3","10","11","7"])
+A = cytnx.UniTensor(cytnx.zeros([d,D,D,D,D])).set_labels(["12","1","8","5","10"])
+Aconj = cytnx.UniTensor(cytnx.zeros([d,D,D,D,D])).set_labels(["12","2","9","6","11"])
+
+
+# net = cytnx.Network()
+# net.FromString(["T:0,1,2,3","Pt2:0,8,9,4","A:12,1,8,5,10","Aconj:12,2,9,6,11","P1:3,10,11,7","TOUT:4,5,6,7","ORDER: (T,(P1,(Pt2,(A,Aconj))))"])
+# net.PutUniTensors(["T","Pt2","A","Aconj","P1"],[T,Pt2,A,A.Conj(),P1])
+
+# t0_net= time.perf_counter()
+# nT = net.Launch()
+# t1_net= time.perf_counter()
+# print(t1_net-t0_net)
+
+t0_net= time.perf_counter()
+res = cytnx.Contract(T,cytnx.Contract(P1,cytnx.Contract(Pt2,cytnx.Contract(A,Aconj))))
+# net.setOrder(optimal = True)
+# print(net.getOrder())
+t1_net= time.perf_counter()
+
+print(t1_net-t0_net)
+
 import numpy as np
 d = 2
-D = 4
-chi = 100
-T = torch.zeros([chi,D,D,chi])
-Pt2 =  torch.zeros([chi,D,D,chi])
-P1 =  torch.zeros([chi,D,D,chi])
-A = torch.zeros([d,D,D,D,D])
+D = 2
+chi = 64
+T = np.ones([chi,D,D,chi])
+Pt2 =   np.ones([chi,D,D,chi])
+P1 =   np.ones([chi,D,D,chi])
+A =  np.ones([d,D,D,D,D])
 
-nT= np.einsum_path(T,[0,1,2,3],Pt2,[0,8,9,4],A,[12,1,8,5,10],A.conj(),[12,2,9,6,11],P1,[3,10,11,7],[4,5,6,7], optimize='optimal')[0]
-print(nT)
+t0_net= time.perf_counter()
+nT= np.einsum_path(T,[0,1,2,3],Pt2,[0,8,9,4],A,[12,1,8,5,10],A.conj(),[12,2,9,6,11],P1,[3,10,11,7],[4,5,6,7])[0]
+t1_net= time.perf_counter()
+
+print(t1_net-t0_net)
+
+    
+# cProfile.run('net.Launch()')
+# T = torch.zeros([chi,D,D,chi])
+# Pt2 =  torch.zeros([chi,D,D,chi])
+# P1 =  torch.zeros([chi,D,D,chi])
+# A = torch.zeros([d,D,D,D,D])
+

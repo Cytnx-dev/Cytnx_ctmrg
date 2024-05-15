@@ -2,6 +2,7 @@
 # from torch.utils.checkpoint import checkpoint
 import cytnx
 import config as cfg
+import time
 #from ipeps.ipeps import IPEPS
 #from ctm.generic.env import ENV
 from ctm.generic.ctm_components import *
@@ -285,6 +286,8 @@ def ctm_get_projectors_4x2(direction, coord, state, env, ctm_args=cfg.ctm_args, 
 
 def ctm_get_projectors_from_matrices(R, Rt, chi, ctm_args=cfg.ctm_args,
                                      global_args=cfg.global_args, diagnostics=None):
+    
+
     assert R.shape() == Rt.shape()
     assert len(R.shape()) == 2
     verbosity = ctm_args.verbosity_projectors
@@ -298,7 +301,8 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, ctm_args=cfg.ctm_args,
                 #     abs_tol=ctm_args.projector_multiplet_abstol,\
                 #     eps_multiplet=ctm_args.projector_eps_multiplet, verbosity=ctm_args.verbosity_projectors,\
                 #     diagnostics=diagnostics)
-                _USV = cytnx.linalg.Gesvd_truncate(_M,chi,0,True,True,0)
+                # _USV = cytnx.linalg.Gesvd_truncate(_M,chi,0,True,True,0)
+                _USV = cytnx.linalg.Svd_truncate(_M,chi,0,True,0)
                 return (x.to(device=M.device) for x in _USV)
         else:
             def truncated_svd(M, chi):
@@ -306,7 +310,7 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, ctm_args=cfg.ctm_args,
                 #     abs_tol=ctm_args.projector_multiplet_abstol,\
                 #     eps_multiplet=ctm_args.projector_eps_multiplet, verbosity=ctm_args.verbosity_projectors,\
                 #     diagnostics=diagnostics)
-                return cytnx.linalg.Gesvd_truncate(M,chi,0,True,True,0)
+                return cytnx.linalg.Svd_truncate(M,chi,0,True,0)
     # elif ctm_args.projector_svd_method=='AF':
     #     def truncated_svd(M, chi):
     #         return truncated_svd_af(M, chi, keep_multiplets=True, \
@@ -325,8 +329,10 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, ctm_args=cfg.ctm_args,
         M = checkpoint(mm, R, transpose(Rt))
     else:
         M = mm(R, transpose(Rt))
+    t0 = time.perf_counter()
     S, U, V = truncated_svd(M, chi)  # M = USV^{T}
-
+    t1 = time.perf_counter()
+    # print("projector = ", t1-t0)
     # print("projector!!")
     # torch.set_printoptions(profile="full")
     # torch.set_printoptions(linewidth=200)
@@ -334,4 +340,5 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, ctm_args=cfg.ctm_args,
     # print((U.t().conj()@U)[0:6, 0:6])
     # print(U.Transpose().Conj().Transpose().shape())
     # print(U.shape())
+
     return  U.Transpose().Conj().Transpose(), U

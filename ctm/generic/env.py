@@ -269,7 +269,9 @@ def init_env(state, env, ctm_args=cfg.ctm_args):
     # else:
     #     raise ValueError("Invalid environment initialization: "+str(ctm_args.ctm_env_init_type))
     if ctm_args.ctm_env_init_type=='CTMRG':
+        
         init_from_ipeps_pbc(state, env, ctm_args.verbosity_initialization)
+
     else:
         raise ValueError("Invalid environment initialization: "+str(ctm_args.ctm_env_init_type))
 

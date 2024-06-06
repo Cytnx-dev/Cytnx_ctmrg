@@ -53,8 +53,10 @@ def ctm_get_projectors_4x4(direction, coord, state, env, ctm_args=cfg.ctm_args, 
     verbosity = ctm_args.verbosity_projectors
     if direction==(0,-1):
         R, Rt = halves_of_4x4_CTM_MOVE_UP(coord, state, env, mode=mode, verbosity=verbosity)
+        
     elif direction==(-1,0): 
         R, Rt = halves_of_4x4_CTM_MOVE_LEFT(coord, state, env, mode=mode, verbosity=verbosity)
+        
     elif direction==(0,1):
         R, Rt = halves_of_4x4_CTM_MOVE_DOWN(coord, state, env, mode=mode, verbosity=verbosity)
     elif direction==(1,0):
@@ -73,7 +75,7 @@ def ctm_get_projectors_4x2(direction, coord, state, env, ctm_args=cfg.ctm_args, 
                   2x4 (horizontal) tensor network used to build projectors
     :param state: wavefunction
     :param env: environment corresponding to ``state`` 
-    :param ctm_args: CTM algorithm configuration
+    :param ctm_args: CTM algorithm configuration[]
     :param global_args: global configuration
     :type direction: tuple(int,int) 
     :type coord: tuple(int,int)
@@ -292,7 +294,7 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, ctm_args=cfg.ctm_args,
     assert len(R.shape()) == 2
     verbosity = ctm_args.verbosity_projectors
 
-    if ctm_args.projector_svd_method=='DEFAULT' or ctm_args.projector_svd_method in ['GESDD','GESDD_CPU']:
+    if ctm_args.projector_svd_method=='DEFAULT' or ctm_args.projector_svd_method in ['GESDD','GESDD_CPU','GESVD']:
         # returns U, S, V of M= USV^\dag
         if ctm_args.projector_svd_method=="GESDD_CPU":
             def truncated_svd(M, chi):
@@ -303,7 +305,17 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, ctm_args=cfg.ctm_args,
                 #     diagnostics=diagnostics)
                 # _USV = cytnx.linalg.Gesvd_truncate(_M,chi,0,True,True,0)
                 _USV = cytnx.linalg.Svd_truncate(_M,chi,0,True,0)
-                return (x.to(device=M.device) for x in _USV)
+                return (x.to(device=M.device()) for x in _USV)
+        if ctm_args.projector_svd_method=="GESVD":
+            def truncated_svd(M, chi):
+                # _M= M.cpu()
+                # _USV= truncated_svd_gesdd(_M, chi, keep_multiplets=True, \
+                #     abs_tol=ctm_args.projector_multiplet_abstol,\
+                #     eps_multiplet=ctm_args.projector_eps_multiplet, verbosity=ctm_args.verbosity_projectors,\
+                #     diagnostics=diagnostics)
+                # _USV = cytnx.linalg.Gesvd_truncate(_M,chi,0,True,True,0)
+                _USV = cytnx.linalg.Gesvd_truncate(M,chi,0,True,True,0)
+                return (x.to(device=M.device()) for x in _USV)
         else:
             def truncated_svd(M, chi):
                 # return truncated_svd_gesdd(M, chi, keep_multiplets=True, \
@@ -330,8 +342,13 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, ctm_args=cfg.ctm_args,
     else:
         M = mm(R, transpose(Rt))
     t0 = time.perf_counter()
-    S, U, V = truncated_svd(M, chi)  # M = USV^{T}
+    M.to_(-1)
+    M.to_(0)
     t1 = time.perf_counter()
+    # print("move time = ", t1-t0)
+    S, U, V = truncated_svd(M, chi)  # M = USV^{T}
+    # exit()
+    
     # print("projector = ", t1-t0)
     # print("projector!!")
     # torch.set_printoptions(profile="full")
@@ -340,5 +357,4 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, ctm_args=cfg.ctm_args,
     # print((U.t().conj()@U)[0:6, 0:6])
     # print(U.Transpose().Conj().Transpose().shape())
     # print(U.shape())
-
     return  U.Transpose().Conj().Transpose(), U

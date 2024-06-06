@@ -10,11 +10,11 @@ int main(){
     cytnx::cytnx_uint64 d = 2;
     cytnx::cytnx_uint64 D = 2;
     cytnx::cytnx_uint64 chi = 64;
-	cytnx::UniTensor T = cytnx::UniTensor(cytnx::zeros({chi,D,D,chi})).set_labels({"0","1","2","3"});
-	cytnx::UniTensor Pt2 = cytnx::UniTensor(cytnx::zeros({chi,D,D,chi})).set_labels({"0","8","9","4"});
-	cytnx::UniTensor P1 = cytnx::UniTensor(cytnx::zeros({chi,D,D,chi})).set_labels({"3","10","11","7"});
-	cytnx::UniTensor A = cytnx::UniTensor(cytnx::zeros({d,D,D,D,D})).set_labels({"12","1","8","5","10"});
-	cytnx::UniTensor Aconj = cytnx::UniTensor(cytnx::zeros({d,D,D,D,D})).set_labels({"12","2","9","6","11"});
+	cytnx::UniTensor T = cytnx::UniTensor(cytnx::zeros({chi,D,D,chi})).set_labels({"0","1","2","3"}).to(0);
+	cytnx::UniTensor Pt2 = cytnx::UniTensor(cytnx::zeros({chi,D,D,chi})).set_labels({"0","8","9","4"}).to(0);
+	cytnx::UniTensor P1 = cytnx::UniTensor(cytnx::zeros({chi,D,D,chi})).set_labels({"3","10","11","7"}).to(0);
+	cytnx::UniTensor A = cytnx::UniTensor(cytnx::zeros({d,D,D,D,D})).set_labels({"12","1","8","5","10"}).to(0);
+	cytnx::UniTensor Aconj = cytnx::UniTensor(cytnx::zeros({d,D,D,D,D})).set_labels({"12","2","9","6","11"}).to(0);
     
 
     // 計算開始時間

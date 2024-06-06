@@ -1,5 +1,6 @@
 # import torch
 # from torch.utils.checkpoint import checkpoint
+import config as cfg
 import cytnx
 from config import ctm_args
 from tn_interface import contract
@@ -42,11 +43,11 @@ def halves_of_4x4_CTM_MOVE_UP(coord, state, env, mode='sl', verbosity=0):
     #     tensors += (torch.ones(1,dtype=torch.bool),)
     # else:
     #     tensors += (torch.zeros(1,dtype=torch.bool),)
-    
+   
     if mode in ['sl']:
-        tensors += (cytnx.UniTensor.ones(shape = [1], labels = ["a"],dtype = cytnx.Type.Bool, device = -1, name = ""),)
+        tensors += (cytnx.UniTensor.ones(shape = [1], labels = ["a"],dtype = cytnx.Type.Bool, device = cfg.global_args.device, name = ""),)
     else:
-        tensors += (cytnx.UniTensor.zeros(shape = [1], labels = ["a"],dtype = cytnx.Type.Bool, device = -1, name = ""),)
+        tensors += (cytnx.UniTensor.zeros(shape = [1], labels = ["a"],dtype = cytnx.Type.Bool, device = cfg.global_args.device, name = ""),)
     
     
     if ctm_args.fwd_checkpoint_halves:
@@ -119,9 +120,9 @@ def halves_of_4x4_CTM_MOVE_LEFT(coord, state, env, mode='sl', verbosity=0):
     #     tensors += (torch.zeros(1,dtype=torch.bool),)
     
     if mode in ['sl']:
-        tensors += (cytnx.UniTensor.ones(shape = [1], labels = ["a"],dtype = cytnx.Type.Bool, device = -1, name = ""),)
+        tensors += (cytnx.UniTensor.ones(shape = [1], labels = ["a"],dtype = cytnx.Type.Bool, device = cfg.global_args.device, name = ""),)
     else:
-        tensors += (cytnx.UniTensor.zeros(shape = [1], labels = ["a"],dtype = cytnx.Type.Bool, device = -1, name = ""),)
+        tensors += (cytnx.UniTensor.zeros(shape = [1], labels = ["a"],dtype = cytnx.Type.Bool, device = cfg.global_args.device, name = ""),)
     
     if ctm_args.fwd_checkpoint_halves:
         return checkpoint(halves_of_4x4_CTM_MOVE_LEFT_c,*tensors)
@@ -178,21 +179,23 @@ def halves_of_4x4_CTM_MOVE_DOWN(coord, state, env, mode='sl', verbosity=0):
         |0                      |0      half1    half2
         C2x2(coord)--1->0 0<-1--C2x2      |_0 0_|
     """
+    # print(env)
     # LD, LU, RD, RU
     tensors= c2x2_LD_t(coord,state,env) + c2x2_LU_t((coord[0], coord[1]-1),state,env) \
         + c2x2_RD_t((coord[0]+1, coord[1]),state,env) + c2x2_RU_t((coord[0]+1, coord[1]-1),state,env)
-    
     # if mode in ['sl']:
     #     tensors += (torch.ones(1,dtype=torch.bool),)
     # else:
     #     tensors += (torch.zeros(1,dtype=torch.bool),)
     
     if mode in ['sl']:
-        tensors += (cytnx.UniTensor.ones(shape = [1], labels = ["a"],dtype = cytnx.Type.Bool, device = -1, name = ""),)
+        tmp = cytnx.UniTensor.ones(shape = [1], labels = ["a"],dtype = cytnx.Type.Bool, device = cfg.global_args.device, name = "")
+        tensors += (tmp,)
     else:
-        tensors += (cytnx.UniTensor.zeros(shape = [1], labels = ["a"],dtype = cytnx.Type.Bool, device = -1, name = ""),)
+        tmp = cytnx.UniTensor.zeros(shape = [1], labels = ["a"],dtype = cytnx.Type.Bool, device = cfg.global_args.device, name = "")
+        tensors += (tmp,)
     
-
+    # print(tensors[0])
     if ctm_args.fwd_checkpoint_halves:
         return checkpoint(halves_of_4x4_CTM_MOVE_DOWN_c,*tensors)
     else:
@@ -258,9 +261,9 @@ def halves_of_4x4_CTM_MOVE_RIGHT(coord, state, env, mode='sl', verbosity=0):
     #     tensors += (torch.zeros(1,dtype=torch.bool),)
     
     if mode in ['sl']:
-        tensors += (cytnx.UniTensor.ones(shape = [1], labels = ["a"],dtype = cytnx.Type.Bool, device = -1, name = ""),)
+        tensors += (cytnx.UniTensor.ones(shape = [1], labels = ["a"],dtype = cytnx.Type.Bool, device = cfg.global_args.device, name = ""),)
     else:
-        tensors += (cytnx.UniTensor.zeros(shape = [1], labels = ["a"],dtype = cytnx.Type.Bool, device = -1, name = ""),)
+        tensors += (cytnx.UniTensor.zeros(shape = [1], labels = ["a"],dtype = cytnx.Type.Bool, device = cfg.global_args.device, name = ""),)
     
 
     if ctm_args.fwd_checkpoint_halves:
@@ -328,9 +331,9 @@ def c2x2_LU(coord, state, env, mode='dl', verbosity=0):
     #     tensors += (torch.zeros(1, dtype=torch.bool),)
     
     if mode in ['dl-open', 'sl-open']:
-        tensors += (cytnx.UniTensor.ones(shape = [1], labels = ["a"],dtype = cytnx.Type.Bool, device = -1, name = ""),)
+        tensors += (cytnx.UniTensor.ones(shape = [1], labels = ["a"],dtype = cytnx.Type.Bool, device = cfg.global_args.device, name = ""),)
     else:
-        tensors += (cytnx.UniTensor.zeros(shape = [1], labels = ["a"],dtype = cytnx.Type.Bool, device = -1, name = ""),)
+        tensors += (cytnx.UniTensor.zeros(shape = [1], labels = ["a"],dtype = cytnx.Type.Bool, device = cfg.global_args.device, name = ""),)
     
     if ctm_args.fwd_checkpoint_c2x2:
         C2x2= checkpoint(_f_c2x2,*tensors)
@@ -500,9 +503,9 @@ def c2x2_RU(coord, state, env, mode='dl', verbosity=0):
     
         
     if mode in ['dl-open', 'sl-open']:
-        tensors += (cytnx.UniTensor.ones(shape = [1], labels = ["a"],dtype = cytnx.Type.Bool, device = -1, name = ""),)
+        tensors += (cytnx.UniTensor.ones(shape = [1], labels = ["a"],dtype = cytnx.Type.Bool, device = cfg.global_args.device, name = ""),)
     else:
-        tensors += (cytnx.UniTensor.zeros(shape = [1], labels = ["a"],dtype = cytnx.Type.Bool, device = -1, name = ""),)
+        tensors += (cytnx.UniTensor.zeros(shape = [1], labels = ["a"],dtype = cytnx.Type.Bool, device = cfg.global_args.device, name = ""),)
     
 
     if ctm_args.fwd_checkpoint_c2x2:
@@ -658,9 +661,9 @@ def c2x2_RD(coord, state, env, mode='dl', verbosity=0):
     #     tensors += (torch.zeros(1, dtype=torch.bool),)
     
     if mode in ['dl-open', 'sl-open']:
-        tensors += (cytnx.UniTensor.ones(shape = [1], labels = ["a"],dtype = cytnx.Type.Bool, device = -1, name = ""),)
+        tensors += (cytnx.UniTensor.ones(shape = [1], labels = ["a"],dtype = cytnx.Type.Bool, device = cfg.global_args.device, name = ""),)
     else:
-        tensors += (cytnx.UniTensor.zeros(shape = [1], labels = ["a"],dtype = cytnx.Type.Bool, device = -1, name = ""),)
+        tensors += (cytnx.UniTensor.zeros(shape = [1], labels = ["a"],dtype = cytnx.Type.Bool, device = cfg.global_args.device, name = ""),)
     
 
     if ctm_args.fwd_checkpoint_c2x2:
@@ -810,9 +813,9 @@ def c2x2_LD(coord, state, env, mode='dl', verbosity=0):
     # else:
     #     tensors += (torch.zeros(1,dtype=torch.bool),)
     if mode in ['dl-open', 'sl-open']:
-        tensors += (cytnx.UniTensor.ones(shape = [1], labels = ["a"],dtype = cytnx.Type.Bool, device = -1, name = ""),)
+        tensors += (cytnx.UniTensor.ones(shape = [1], labels = ["a"],dtype = cytnx.Type.Bool, device = cfg.global_args.device, name = ""),)
     else:
-        tensors += (cytnx.UniTensor.zeros(shape = [1], labels = ["a"],dtype = cytnx.Type.Bool, device = -1, name = ""),)
+        tensors += (cytnx.UniTensor.zeros(shape = [1], labels = ["a"],dtype = cytnx.Type.Bool, device = cfg.global_args.device, name = ""),)
     
 
     if ctm_args.fwd_checkpoint_c2x2:

@@ -13,20 +13,40 @@ parser.add_argument("--tensor", default="TFIM.cytnx", help="Input building block
 parser.add_argument("--bondim", type=int, default=2)
 args, unknown_args = parser.parse_known_args()
 
-def main():
-    cfg.configure(args)
+# def test(tmp):
+#     a = contiguous(cytnx.ncon([tmp,conj(tmp)],[[1,2,-1,-3,3],[1,2,-2,-4,3]]))
+#     a = view(a, [args.bondim**2,args.bondim**2] )
+# def truncated_svd(M, chi):
+#     # return cytnx.linalg.Svd_truncate(M,chi,0,True,0)
+#     return cytnx.linalg.Gesvd_truncate(M,chi,0,True,True,0)
 
-    tmp = cytnx.UniTensor.uniform(shape = [2,args.bondim,args.bondim,args.bondim,args.bondim],low = 0, high = 1, in_labels = ["a","b","c","d","e"], seed = -1, dtype = 3, device = -1, name = "random")
+def main():
+    # M = cytnx.UniTensor.Load("Svd_M.cytnx")
+    # S, U, V = truncated_svd(M, args.chi)  # M = USV^{T}
+    # exit()
+    
+    cfg.configure(args)
+    print("device arg = ", cfg.global_args.device)
+    tmp = cytnx.UniTensor.uniform(shape = [2,args.bondim,args.bondim,args.bondim,args.bondim],low = 0, high = 1, in_labels = ["a","b","c","d","e"], seed = -1, dtype = 1, device = cfg.global_args.device, name = "random")
+    print("device = ", tmp.device())
     tmp= tmp/tmp.get_block().Abs().Max().item()
+    
     sites = {(0,0): tmp}
     state = IPEPS(sites)
-    
-    # def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
-    #     return False, history
-
+    # # print(state.sites[(0,0)])
+    # # exit()
+    # # def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
+    # #     return False, history
     ctm_env_init = ENV(args.chi, state)
+    tmp.to_(-1)
+    tmp.to_(0)
     init_env(state, ctm_env_init)
-    
+    # print(state.sites[(0,0)])
+    # init_env(state, ctm_env_init)
+    # print(state.sites[(0,0)])
+    # exit()
+    # print(state.sites[(0,0)])
+    # exit()
     # print(", ".join(["epoch","energy"]+obs_labels))
     # print(", ".join([f"{-1}",f"{e_curr0}"]+[f"{v}" for v in obs_values0]))
     

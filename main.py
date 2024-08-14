@@ -38,8 +38,8 @@ def main():
     # # def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
     # #     return False, history
     ctm_env_init = ENV(args.chi, state)
-    tmp.to_(-1)
-    tmp.to_(0)
+    # tmp.to_(-1)
+    # tmp.to_(cfg.global_args.device)
     init_env(state, ctm_env_init)
     # print(state.sites[(0,0)])
     # init_env(state, ctm_env_init)

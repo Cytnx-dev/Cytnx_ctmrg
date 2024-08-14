@@ -1,7 +1,26 @@
-# import cytnx
+import cytnx
 
-# # tensors
-# A = cytnx.UniTensor.zeros(shape = [2,3,4], labels = ["a","b","c"],dtype = 3, device = -1, name = "zero")+9
+# tensors
+# A = cytnx.UniTensor.zeros(shape = [2,3,4], labels = ["a","b","c"],dtype = 3, device = -1, name = "zero")
+bond_d = cytnx.Bond(
+    cytnx.BD_IN, [cytnx.Qs(1)>>1, cytnx.Qs(-1)>>1],
+    [cytnx.Symmetry.U1()])
+
+bond_e = cytnx.Bond(
+    cytnx.BD_IN, [cytnx.Qs(1)>>1, cytnx.Qs(-1)>>1],
+    [cytnx.Symmetry.U1()])
+
+bond_f = cytnx.Bond(
+    cytnx.BD_OUT, 
+    [cytnx.Qs(2)>>1, cytnx.Qs(0)>>2, cytnx.Qs(-2)>>1],
+    [cytnx.Symmetry.U1()])
+
+Tsymm = cytnx.UniTensor([bond_d, bond_e, bond_f], 
+                        name="symm. tensor", 
+                        labels=["d","e","f"])
+
+Tsymm.getTotalQnums()
+exit()
 # print(cytnx.UniTensor.uniform(shape = [2,3,4],low = 0, high = 1, in_labels = ["a","b","c"], seed = -1, dtype = 3, device = -1, name = "random")-100)
 # print(cytnx.UniTensor.zeros(shape = [2,3,4], labels = ["a","b","c"],dtype = 3, device = -1, name = "zero"))
 # print(cytnx.UniTensor.eye(dim = 3, labels = ["a","b"], is_diag = True, dtype = 3, device = -1, name = "zero"))

@@ -428,8 +428,8 @@ def absorb_truncate_CTM_MOVE_UP_c(*tensors):
         t0_net= time.perf_counter()
 
         net_a.PutUniTensors(["T","Pt2","A","Aconj","P1"],[T,Pt2,A,A.Conj(),P1])
-        # net_a.setOrder(True)
-        # print(net.getOrder())
+        if (T.device()!=-1):
+            net_a.setOrder(True)
         nT = net_a.Launch()
         # T = T.set_labels(["0","1","2","3"])
         # Pt2 = Pt2.set_labels(["0","8","9","4"])
@@ -560,7 +560,8 @@ def absorb_truncate_CTM_MOVE_LEFT_c(*tensors):
         #     P1,[0,4,5,9],[9,12,10,11])
 
         net_b.PutUniTensors(["T","Pt2","A","Aconj","P1"],[T,Pt2,A,A.Conj(),P1])
-        # net_b.setOrder(True)
+        if (T.device()!=-1):
+            net_b.setOrder(True)
         nT = net_b.Launch()
         
         # nT= cytnx.ncon([T,Pt2,A,A.Conj(),P1],[[0,1,2,3],[1,6,7,-2],[8,4,2,6,-3],[8,5,3,7,-4],[0,4,5,-1]])
@@ -690,7 +691,8 @@ def absorb_truncate_CTM_MOVE_DOWN_c(*tensors):
         # nT= torch.einsum(T,[0,1,2,3],Pt2,[3,10,11,7],A,[12,5,8,0,10],A.conj(),[12,6,9,1,11],\
         #     P1,[2,8,9,4],[5,6,4,7])
         net_c.PutUniTensors(["T","Pt2","A","Aconj","P1"],[T,Pt2,A,A.Conj(),P1])
-        # net_c.setOrder(True)
+        if (T.device()!=-1):
+            net_c.setOrder(True)
         nT = net_c.Launch()
         # nT = cytnx.ncon([T,Pt2,A,A.Conj(),P1],[[0,1,2,3],[3,10,11,-4],[12,-1,8,0,10],[12,-2,9,1,11],[2,8,9,-3]])
         nT= nT.reshape(nT.shape()[0]*nT.shape()[1],nT.shape()[2],nT.shape()[3])
@@ -810,7 +812,8 @@ def absorb_truncate_CTM_MOVE_RIGHT_c(*tensors):
         # nT= torch.einsum(T,[0,1,2,3],Pt2,[0,4,5,9],A,[8,4,10,6,1],A.conj(),[8,5,11,7,2],\
         #     P1,[3,6,7,12],[9,10,11,12])
         net_d.PutUniTensors(["T","Pt2","A","Aconj","P1"],[T,Pt2,A,A.Conj(),P1])
-        # net_d.setOrder(True)
+        if (T.device()!=-1):
+            net_d.setOrder(True)
         nT = net_d.Launch()
         # nT= cytnx.ncon([T,Pt2,A,A.Conj(),P1],[[0,1,2,3],[0,4,5,-1],[8,4,-2,6,1],[8,5,-3,7,2],[3,6,7,-4]])
         

@@ -341,10 +341,6 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, ctm_args=cfg.ctm_args,
         M = checkpoint(mm, R, transpose(Rt))
     else:
         M = mm(R, transpose(Rt))
-    t0 = time.perf_counter()
-    # M.to_(-1)
-    # M.to_(0)
-    t1 = time.perf_counter()
     # print("move time = ", t1-t0)
     t0_net= time.perf_counter()
     S, U, V = truncated_svd(M, chi)  # M = USV^{T}

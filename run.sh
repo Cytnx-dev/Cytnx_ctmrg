@@ -3,8 +3,9 @@ export MKL_NUM_THREADS=1
 
 # python main.py --chi 16 --bondim 2 --CTMARGS_ctm_conv_tol 0 --CTMARGS_ctm_max_iter 1 #--GLOBALARGS_device -1 --CTMARGS_projector_svd_method "GESVD" 
 
-python main.py --chi 256 --bondim 4 --CTMARGS_ctm_conv_tol 0 --CTMARGS_ctm_max_iter 10 --GLOBALARGS_device 0 --CTMARGS_projector_svd_method "GESVD"
-
+python main.py --chi 1024 --bondim 4 --CTMARGS_ctm_conv_tol 0 --CTMARGS_ctm_max_iter 2 --GLOBALARGS_device 0 --CTMARGS_projector_svd_method GESVD
+# python main.py --chi 32 --bondim 4 --CTMARGS_ctm_conv_tol 0 --CTMARGS_ctm_max_iter 10 --GLOBALARGS_device 0 #--CTMARGS_projector_svd_method GESVD
+# python main.py --chi 16 --bondim 4 --CTMARGS_ctm_conv_tol 0 --CTMARGS_ctm_max_iter 10 --GLOBALARGS_device 0 #--CTMARGS_projector_svd_method GESVD
 # python main.py --chi 64 --bondim 4 --CTMARGS_ctm_conv_tol 0 --CTMARGS_ctm_max_iter 10 --CTMARGS_projector_svd_method "GESVD" --GLOBALARGS_device 0
 
 # python main.py --chi 128 --bondim 4 --CTMARGS_ctm_conv_tol 0 --CTMARGS_ctm_max_iter 10 --CTMARGS_projector_svd_method "GESVD" --GLOBALARGS_device 0

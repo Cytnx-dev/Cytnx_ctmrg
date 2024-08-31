@@ -314,6 +314,7 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, ctm_args=cfg.ctm_args,
                 #     eps_multiplet=ctm_args.projector_eps_multiplet, verbosity=ctm_args.verbosity_projectors,\
                 #     diagnostics=diagnostics)
                 # _USV = cytnx.linalg.Gesvd_truncate(_M,chi,0,True,True,0)
+                print("gesvd truncate!")
                 _USV = cytnx.linalg.Gesvd_truncate(M,chi,0,True,True,0)
                 return (x.to(device=M.device()) for x in _USV)
         else:
@@ -322,6 +323,7 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, ctm_args=cfg.ctm_args,
                 #     abs_tol=ctm_args.projector_multiplet_abstol,\
                 #     eps_multiplet=ctm_args.projector_eps_multiplet, verbosity=ctm_args.verbosity_projectors,\
                 #     diagnostics=diagnostics)
+                print("svd truncate!")
                 return cytnx.linalg.Svd_truncate(M,chi,0,True,0)
     # elif ctm_args.projector_svd_method=='AF':
     #     def truncated_svd(M, chi):

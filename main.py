@@ -27,7 +27,7 @@ def main():
     
     cfg.configure(args)
     print("device arg = ", cfg.global_args.device)
-    tmp = cytnx.UniTensor.uniform(shape = [2,args.bondim,args.bondim,args.bondim,args.bondim],low = 0, high = 1, in_labels = ["a","b","c","d","e"], seed = -1, dtype = cytnx.Type.ComplexDouble, device = cfg.global_args.device, name = "random")
+    tmp = cytnx.UniTensor.uniform(shape = [2,args.bondim,args.bondim,args.bondim,args.bondim],low = 0, high = 1, in_labels = ["a","b","c","d","e"], seed = -1, dtype = 1, device = cfg.global_args.device, name = "random")
     print("device = ", tmp.device())
     tmp= tmp/tmp.get_block().Abs().Max().item()
     

@@ -324,6 +324,7 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, ctm_args=cfg.ctm_args,
                 #     eps_multiplet=ctm_args.projector_eps_multiplet, verbosity=ctm_args.verbosity_projectors,\
                 #     diagnostics=diagnostics)
                 # print("svd truncate!")
+                print("M.device(): ",M.device())
                 return cytnx.linalg.Svd_truncate(M,chi,0,True,0)
     # elif ctm_args.projector_svd_method=='AF':
     #     def truncated_svd(M, chi):
@@ -347,7 +348,11 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, ctm_args=cfg.ctm_args,
     t0_net= time.perf_counter()
     S, U, V = truncated_svd(M, chi)  # M = USV^{T}
     t1_net= time.perf_counter()
-    print("svd = ", t1_net-t0_net)   
+    # print("svd = ", t1_net-t0_net)
+    if not hasattr(cfg.global_args,"svd_time"):
+        cfg.global_args.svd_time= t1_net-t0_net
+    else:
+        cfg.global_args.svd_time += t1_net-t0_net
     # exit()
     
     # print("projector = ", t1-t0)

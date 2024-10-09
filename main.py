@@ -1,5 +1,7 @@
 # import context
 # import torch
+import sys,os
+sys.path.append('/home/petjelinux/Cytnx_lib')
 import cytnx
 import argparse
 import config as cfg
@@ -27,7 +29,7 @@ def main():
     
     cfg.configure(args)
     print("device arg = ", cfg.global_args.device)
-    tmp = cytnx.UniTensor.uniform(shape = [2,args.bondim,args.bondim,args.bondim,args.bondim],low = 0, high = 1, in_labels = ["a","b","c","d","e"], seed = -1, dtype = 1, device = cfg.global_args.device, name = "random")
+    tmp = cytnx.UniTensor.uniform(shape = [2,args.bondim,args.bondim,args.bondim,args.bondim],low = 0, high = 1, in_labels = ["a","b","c","d","e"], seed = -1, dtype = cytnx.Type.ComplexDouble, device = cfg.global_args.device, name = "random")
     print("device = ", tmp.device())
     tmp= tmp/tmp.get_block().Abs().Max().item()
     
@@ -90,9 +92,22 @@ def main():
             return True, history
         return False, history
 
-
     env, history, t_ctm, t_obs = ctmrg.run(state, ctm_env_init, conv_check= ctmrg_conv_C)
+
+    ##########################################################  
+    # import cProfile
+    # import pstats
+    
+    # prof = cProfile.Profile()
+    # prof.runctx('ctmrg.run(state, ctm_env_init, conv_check= ctmrg_conv_C)', globals(), locals())
+    # prof.dump_stats('output.pstats')
+    ##########################################################  
+
     print("t_ctm = ", t_ctm)
+    print("t_svd = ", cfg.global_args.svd_time)
+    print("t_net = ", cfg.global_args.net_time)
+
+
     # print("t_obs = ", t_obs)
     # # 6) compute final observables
     # e_curr0 = energy_f(state, ctm_env_init)

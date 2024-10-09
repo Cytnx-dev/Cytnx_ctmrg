@@ -1,9 +1,23 @@
 
 export MKL_NUM_THREADS=1
+# export CUDA_VISIBLE_DEVICES=0
 
 # python main.py --chi 16 --bondim 2 --CTMARGS_ctm_conv_tol 0 --CTMARGS_ctm_max_iter 1 #--GLOBALARGS_device -1 --CTMARGS_projector_svd_method "GESVD" 
 
-python main.py --chi 128 --bondim 4 --CTMARGS_ctm_conv_tol 0 --CTMARGS_ctm_max_iter 10 --GLOBALARGS_device 2 #--CTMARGS_projector_svd_method GESVD
+# Use cProfile to profile the code
+# python -m cProfile -o output.pstats main.py --chi 16 --bondim 4 --CTMARGS_ctm_conv_tol 0 --CTMARGS_ctm_max_iter 10 --GLOBALARGS_device 2 --CTMARGS_projector_svd_method GESVD
+# python main.py --chi 16 --bondim 4 --CTMARGS_ctm_conv_tol 0 --CTMARGS_ctm_max_iter 10 --GLOBALARGS_device 0 --CTMARGS_projector_svd_method GESVD
+# python -m gprof2dot -f pstats output.pstats | dot -T png -o profile.png
+
+# Try to use nsys to profile the code
+# nsys profile --stats=true python main.py --chi 16 --bondim 4 --CTMARGS_ctm_conv_tol 0 --CTMARGS_ctm_max_iter 10 --GLOBALARGS_device 0 --CTMARGS_projector_svd_method GESVD
+
+for chi in {16,32,64,128,256} 
+do
+    echo "chi: ${chi}"
+    python main.py --chi ${chi} --bondim 4 --CTMARGS_ctm_conv_tol 0 --CTMARGS_ctm_max_iter 10 --GLOBALARGS_device 0 --CTMARGS_projector_svd_method GESVD
+done
+
 # python main.py --chi 32 --bondim 4 --CTMARGS_ctm_conv_tol 0 --CTMARGS_ctm_max_iter 10 --GLOBALARGS_device 0 #--CTMARGS_projector_svd_method GESVD
 # python main.py --chi 16 --bondim 4 --CTMARGS_ctm_conv_tol 0 --CTMARGS_ctm_max_iter 10 --GLOBALARGS_device 0 #--CTMARGS_projector_svd_method GESVD
 # python main.py --chi 64 --bondim 4 --CTMARGS_ctm_conv_tol 0 --CTMARGS_ctm_max_iter 10 --CTMARGS_projector_svd_method "GESVD" --GLOBALARGS_device 0

@@ -1,26 +1,7 @@
+import sys
+sys.path.append('/home/petjelinux/Cytnx_lib')
 import cytnx
 
-# tensors
-# A = cytnx.UniTensor.zeros(shape = [2,3,4], labels = ["a","b","c"],dtype = 3, device = -1, name = "zero")
-bond_d = cytnx.Bond(
-    cytnx.BD_IN, [cytnx.Qs(1)>>1, cytnx.Qs(-1)>>1],
-    [cytnx.Symmetry.U1()])
-
-bond_e = cytnx.Bond(
-    cytnx.BD_IN, [cytnx.Qs(1)>>1, cytnx.Qs(-1)>>1],
-    [cytnx.Symmetry.U1()])
-
-bond_f = cytnx.Bond(
-    cytnx.BD_OUT, 
-    [cytnx.Qs(2)>>1, cytnx.Qs(0)>>2, cytnx.Qs(-2)>>1],
-    [cytnx.Symmetry.U1()])
-
-Tsymm = cytnx.UniTensor([bond_d, bond_e, bond_f], 
-                        name="symm. tensor", 
-                        labels=["d","e","f"])
-
-Tsymm.getTotalQnums()
-exit()
 # print(cytnx.UniTensor.uniform(shape = [2,3,4],low = 0, high = 1, in_labels = ["a","b","c"], seed = -1, dtype = 3, device = -1, name = "random")-100)
 # print(cytnx.UniTensor.zeros(shape = [2,3,4], labels = ["a","b","c"],dtype = 3, device = -1, name = "zero"))
 # print(cytnx.UniTensor.eye(dim = 3, labels = ["a","b"], is_diag = True, dtype = 3, device = -1, name = "zero"))
@@ -105,54 +86,6 @@ exit()
 # import torch
 
 
-import time
-import numpy as np
-import cytnx
-# import cProfile
-# import re
-
-# M = cytnx.UniTensor.Load("gesvd.cytnx")
-# print(M)
-# def contract():
-
-d = 2
-D = 2
-chi = 128
-
-device = -1
-
-T = cytnx.UniTensor(cytnx.zeros([chi,D,D,chi])).set_labels(["0","1","2","3"]).to(device)
-Pt2 = cytnx.UniTensor(cytnx.zeros([chi,D,D,chi])).set_labels(["0","8","9","4"]).to(device)
-P1 = cytnx.UniTensor(cytnx.zeros([chi,D,D,chi])).set_labels(["3","10","11","7"]).to(device)
-A = cytnx.UniTensor(cytnx.zeros([d,D,D,D,D])).set_labels(["12","1","8","5","10"]).to(device)
-Aconj = cytnx.UniTensor(cytnx.zeros([d,D,D,D,D])).set_labels(["12","2","9","6","11"]).to(device)
-
-net = cytnx.Network()
-net.FromString(["T:0,1,2,3","Pt2:0,8,9,4","A:12,1,8,5,10","Aconj:12,2,9,6,11","P1:3,10,11,7","TOUT:4,5,6,7","ORDER: (P1,((T,Pt2),(A,Aconj)))"])
-net.PutUniTensors(["T","Pt2","A","Aconj","P1"],[T,Pt2,A,Aconj ,P1])
-t0_net= time.perf_counter()
-net.setOrder(True)
-nT = net.Launch()
-print(net.getOrder())
-t1_net= time.perf_counter()
-print(t1_net-t0_net)
-
-
-# net = cytnx.Network()
-# net.FromString(["T:0,1,2,3","Pt2:0,8,9,4","A:12,1,8,5,10","Aconj:12,2,9,6,11","P1:3,10,11,7","TOUT:4,5,6,7","ORDER: (P1,((T,Pt2),(A,Aconj)))"])
-# net.PutUniTensors(["T","Pt2","A","Aconj","P1"],[T,Pt2,A,Aconj ,P1])
-# t0_net= time.perf_counter()
-# net.setOrder(True)
-# nT = net.Launch()
-# print(net.getOrder())
-# t1_net= time.perf_counter()
-# print(t1_net-t0_net)
-
-# t0_net= time.perf_counter()
-# res = cytnx.Contract(P1,cytnx.Contract(cytnx.Contract(T,Pt2,True,True),cytnx.Contract(A,Aconj,True,True),True,True),True,True)
-# t1_net= time.perf_counter()
-# print(t1_net-t0_net)
-
 from opt_einsum import contract, contract_path
 import time
 import numpy as np
@@ -172,9 +105,80 @@ for kw in ['branch-all','dp','optimal']:
     print(nT)
     
     t0_net= time.perf_counter()
-    nT= contract(T,[0,1,2,3],Pt2,[0,8,9,4],A,[12,1,8,5,10],A.conj(),[12,2,9,6,11],P1,[3,10,11,7],[4,5,6,7], optimize = kw)
+    # nT= contract(T,[0,1,2,3],Pt2,[0,8,9,4],A,[12,1,8,5,10],A.conj(),[12,2,9,6,11],P1,[3,10,11,7],[4,5,6,7], optimize = kw)
+    nT= contract(T,[0,1,2,3],Pt2,[0,8,9,4],A,[12,1,8,5,10],A.conj(),[12,2,9,6,11],P1,[3,10,11,7],[4,5,6,7], order = nT)
     t1_net= time.perf_counter()
     print(t1_net-t0_net)
+
+t0_net= time.perf_counter()
+np.einsum('abcd,defg->abcefg',T,P1)
+t1_net= time.perf_counter()
+print("numpy: ",t1_net-t0_net)
+
+
+
+
+import time
+import numpy as np
+import cytnx
+# import cProfile
+# import re
+
+# M = cytnx.UniTensor.Load("gesvd.cytnx")
+# print(M)
+# def contract():
+
+d = 2
+D = 2
+chi = 128
+
+device = -1
+
+T = cytnx.UniTensor(cytnx.zeros([chi,D,D,chi])).set_labels(["0","1","2","3"]).set_name("T").to(device)
+Pt2 = cytnx.UniTensor(cytnx.zeros([chi,D,D,chi])).set_labels(["0","8","9","4"]).set_name("Pt2").to(device)
+P1 = cytnx.UniTensor(cytnx.zeros([chi,D,D,chi])).set_labels(["3","10","11","7"]).set_name("P1").to(device)
+A = cytnx.UniTensor(cytnx.zeros([d,D,D,D,D])).set_labels(["12","1","8","5","10"]).set_name("A").to(device)
+Aconj = cytnx.UniTensor(cytnx.zeros([d,D,D,D,D])).set_labels(["12","2","9","6","11"]).set_name("Aconj").to(device)
+
+T2 = cytnx.UniTensor(cytnx.zeros([chi,D,D,chi])).set_labels(["0","1","2","3"]).set_name("T2").to(device)
+t0_net= time.perf_counter()
+T.contract(P1, False, False)
+t1_net= time.perf_counter()
+print("cytnx: ",t1_net-t0_net)
+
+t0_net= time.perf_counter()
+T2.contract(Pt2, False, False)
+t1_net= time.perf_counter()
+print("cytnx: ",t1_net-t0_net)
+
+net = cytnx.Network()
+net.FromString(["T:0,1,2,3","Pt2:0,8,9,4","A:12,1,8,5,10","Aconj:12,2,9,6,11","P1:3,10,11,7","TOUT:4,5,6,7","ORDER: (P1,((T,Pt2),(A,Aconj)))"])
+net.PutUniTensors(["T","Pt2","A","Aconj","P1"],[T,Pt2,A,Aconj ,P1])
+t0_net= time.perf_counter()
+net.setOrder(True)
+nT = net.Launch()
+print(net.getOrder())
+t1_net= time.perf_counter()
+print(t1_net-t0_net)
+
+
+
+
+# net = cytnx.Network()
+# net.FromString(["T:0,1,2,3","Pt2:0,8,9,4","A:12,1,8,5,10","Aconj:12,2,9,6,11","P1:3,10,11,7","TOUT:4,5,6,7","ORDER: (P1,((T,Pt2),(A,Aconj)))"])
+# net.PutUniTensors(["T","Pt2","A","Aconj","P1"],[T,Pt2,A,Aconj ,P1])
+# t0_net= time.perf_counter()
+# net.setOrder(True)
+# nT = net.Launch()
+# print(net.getOrder())
+# t1_net= time.perf_counter()
+# print(t1_net-t0_net)
+
+# t0_net= time.perf_counter()
+# res = cytnx.Contract(P1,cytnx.Contract(cytnx.Contract(T,Pt2,True,True),cytnx.Contract(A,Aconj,True,True),True,True),True,True)
+# t1_net= time.perf_counter()
+# print(t1_net-t0_net)
+
 
 # import torch
 # # from torch.backends import

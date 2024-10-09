@@ -89,6 +89,8 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
                     verbosity=ctm_args.verbosity_ctm_move,diagnostics=diagnostics)
         t1_ctm= time.perf_counter()
 
+        t_ctm+= t1_ctm-t0_ctm
+
         t0_obs= time.perf_counter()
         if conv_check is not None:
             # evaluate convergence of the CTMRG procedure
@@ -100,7 +102,6 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
                 break
         t1_obs= time.perf_counter()
 
-        t_ctm+= t1_ctm-t0_ctm
         t_obs+= t1_obs-t0_obs
 
     return env, history, t_ctm, t_obs
@@ -438,7 +439,11 @@ def absorb_truncate_CTM_MOVE_UP_c(*tensors):
         # Aconj = A.Conj().set_labels(["12","2","9","6","11"])
         # nT = cytnx.Contract(T,cytnx.Contract(cytnx.Contract(P1,Pt2),cytnx.Contract(A,Aconj)))
         t1_net= time.perf_counter()
-        print("net = ", t1_net-t0_net)
+        if not hasattr(cfg.global_args, "net_time"):
+            cfg.global_args.net_time=t1_net-t0_net
+        else:
+            cfg.global_args.net_time+=t1_net-t0_net
+        # print("net = ", t1_net-t0_net)
         nT= nT.reshape(nT.shape()[0],nT.shape()[1]*nT.shape()[2],nT.shape()[3])
 
     # Assign new C,T 
